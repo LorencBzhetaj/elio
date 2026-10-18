@@ -120,14 +120,28 @@ const tiles = media.slice(0, 6);
     .hero-collage__note--right { display: none; }
   }
 
-  /* Mobile: four deliberate crops in an offset arrangement */
+  /* Phones: three deliberate crops whose height follows the screen, so the title and both buttons
+     are visible without scrolling (checked down to 360×640). */
   @media (max-width: 767.98px) {
+    .hero-collage {
+      padding-block: 12px 28px;
+    }
     .hero-collage__stage {
       height: auto;
       display: grid;
       grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-      grid-template-rows: 150px 150px 70px;
+      grid-template-rows: repeat(2, clamp(78px, 13svh, 150px));
       gap: 10px;
+    }
+    .hero-collage__copy {
+      margin-top: 18px;
+    }
+    .hero-collage__copy h1 {
+      font-size: clamp(2.2rem, 1.4rem + 4vw, 2.8rem);
+    }
+    .hero-collage__desc {
+      font-size: 1rem;
+      margin-bottom: 16px;
     }
     .tile {
       position: relative;
@@ -138,9 +152,37 @@ const tiles = media.slice(0, 6);
     }
     .tile--2 { grid-column: 1; grid-row: 1 / span 2; transform: rotate(-1.5deg); }
     .tile--3 { grid-column: 2; grid-row: 1; transform: rotate(2deg); }
-    .tile--4 { grid-column: 2; grid-row: 2 / span 2; transform: rotate(-1deg); }
-    .tile--5 { grid-column: 1; grid-row: 3; transform: rotate(1deg); }
-    .tile--1, .tile--6, .hero-collage__note, .hero-collage__squiggle { display: none; }
-    .hero-collage__actions .btn { flex: 1 1 140px; }
+    .tile--4 { grid-column: 2; grid-row: 2; transform: rotate(-1deg); }
+    .tile--1, .tile--5, .tile--6, .hero-collage__note, .hero-collage__squiggle { display: none; }
+    .hero-collage__actions .btn {
+      flex: 1 1 120px;
+      min-width: 0;
+      padding-inline: 10px;
+      gap: 6px;
+      white-space: nowrap;
+      font-size: 0.92rem;
+    }
+  }
+  /* Very short phones (e.g. 320×568): smaller tiles and text so the buttons still fit. */
+  @media (max-width: 767.98px) and (max-height: 620px) {
+    .hero-collage__stage {
+      grid-template-rows: repeat(2, 62px);
+    }
+    .hero-collage__copy h1 {
+      font-size: 2rem;
+    }
+    .hero-collage__desc {
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+  }
+  /* Smallest phones only (≈320×568): keep title + buttons on the first screen. */
+  @media (max-width: 340px) and (max-height: 620px) {
+    .hero-collage__desc {
+      display: none;
+    }
+    .hero-collage__actions {
+      margin-top: 12px;
+    }
   }
 </style>

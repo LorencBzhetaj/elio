@@ -63,7 +63,8 @@ const canonicalUrl = canonical ?? (Astro.site ? new URL(Astro.url.pathname, Astr
     <slot name="top" />
     {site.showDraftBanner && (
       <div class="draft-banner" role="note">
-        Pre-launch build: sample content, illustrations instead of photos and test-mode checkout. Nothing here is a real offer yet.
+        <span class="draft-banner__long">Pre-launch build: sample content, illustrations instead of photos and test-mode checkout. Nothing here is a real offer yet.</span>
+        <span class="draft-banner__short">Pre-launch preview · sample content · test checkout</span>
       </div>
     )}
     <Header overlay={headerOverlay} brand={brand} />
@@ -78,6 +79,21 @@ const canonicalUrl = canonical ?? (Astro.site ? new URL(Astro.url.pathname, Astr
 </html>
 
 <style>
+  .draft-banner__short {
+    display: none;
+  }
+  @media (max-width: 767.98px) {
+    .draft-banner {
+      padding-block: 4px;
+      font-size: 0.76rem;
+    }
+    .draft-banner__long {
+      display: none;
+    }
+    .draft-banner__short {
+      display: inline;
+    }
+  }
   .draft-banner {
     background: #fff3cd;
     color: #5b4300;

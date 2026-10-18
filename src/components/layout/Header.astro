@@ -15,7 +15,7 @@ const isActive = (href: string) => path === href || path.startsWith(href + '/');
 <header class:list={['site-header', { 'site-header--overlay': overlay }]}>
   <div class="container site-header__inner">
     {/* Over the panorama hero, the hero renders the large stacked logo instead. */}
-    {!overlay && <Logo brand={brand} />}
+    {overlay ? <span class="site-header__mobile-logo"><Logo brand={brand} /></span> : <Logo brand={brand} />}
     <nav class="site-header__nav" aria-label="Main">
       <ul>
         {mainNav.map((item) => (
@@ -64,6 +64,12 @@ const isActive = (href: string) => path === href || path.startsWith(href + '/');
   }
   .site-header__nav {
     margin-left: auto;
+  }
+  /* Over the panorama hero the big stacked logo is shown on desktop; phones use the compact one here. */
+  @media (min-width: 768px) {
+    .site-header__mobile-logo {
+      display: none;
+    }
   }
   .site-header__nav ul {
     display: flex;
