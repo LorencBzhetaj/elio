@@ -5,7 +5,11 @@ import Icon from '../components/Icon.astro';
 import { loadContent } from '../features/content/queries';
 
 const content = await loadContent();
-const destinations = content.destinations.map((d) => ({ slug: d.slug, title: d.title, kicker: d.kicker }));
+// Destinations and saved places (place:<slug>) share one list.
+const destinations = [
+  ...content.destinations.map((d) => ({ slug: d.slug, title: d.title, kicker: d.kicker, href: `/destinations/${d.slug}` })),
+  ...content.places.map((p) => ({ slug: `place:${p.slug}`, title: p.title, kicker: 'Photo spot', href: `/photo-spots/${p.slug}` })),
+];
 ---
 <BaseLayout title="My trip" noindex description="Your saved Albania trip, day by day. Stored on this device.">
   <PageHeader title="My trip" note="Your Albania, your order." intro="Arrange saved destinations day by day. Use the arrow buttons to reorder or move a place to another day." />
@@ -28,9 +32,9 @@ const destinations = content.destinations.map((d) => ({ slug: d.slug, title: d.t
 
 <script>
   import { addDay, moveDestination, moveToDay, removeDay, removeDestination, emptyTrip, type SavedTrip } from '../features/trip/model';
-  import { clearTrip, loadTrip, saveTrip } from '../features/trip/storage';
+  import { clearTrip, loadTrip, saveTrip, TRIP_KEY } from '../features/trip/storage';
 
-  type D = { slug: string; title: string; kicker: string };
+  type D = { slug: string; title: string; kicker: string; href: string };
   const known = new Map<string, D>((JSON.parse(document.getElementById('destinations-data')!.textContent || '[]') as D[]).map((d) => [d.slug, d]));
   const root = document.getElementById('trip-root')!;
   const alertBox = document.getElementById('trip-alert')!;
@@ -86,7 +90,7 @@ const destinations = content.destinations.map((d) => ({ slug: d.slug, title: d.t
         items.append(
           el('li', { className: 'card trip-item' + (d ? '' : ' trip-item--missing') },
             el('div', { className: 'trip-item__text' },
-              d ? el('a', { href: `/destinations/${id}`, className: 'trip-item__title' }, name) : el('span', { className: 'trip-item__title' }, name),
+              d ? el('a', { href: d.href, className: 'trip-item__title' }, name) : el('span', { className: 'trip-item__title' }, name),
               el('span', { className: 'muted' }, d ? d.kicker : 'No longer available — remove it from your trip'),
             ),
             el('div', { className: 'trip-item__controls' },
@@ -120,6 +124,13 @@ const destinations = content.destinations.map((d) => ({ slug: d.slug, title: d.t
     commit(emptyTrip(), 'Trip cleared.');
   });
   render();
+  // Keep in sync with saves made from the map or another tab.
+  window.addEventListener('storage', (e) => {
+    if (e.key === TRIP_KEY) {
+      trip = loadTrip().trip;
+      render();
+    }
+  });
 </script>
 
 <style>

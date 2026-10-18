@@ -1,0 +1,298 @@
+---
+/**
+ * Compact listing toolbar: one search field, a "Filters" button (opens a popover on desktop, a bottom
+ * sheet on phones), the result count and an optional Sort. Never renders rows of category pills.
+ * Works without JavaScript as a GET form (state lives in the URL).
+ */
+import Icon from '../Icon.astro';
+import { activeFilterCount, summarize, type FilterGroup, type FilterItem, type FilterState, type SortOption } from '../../features/filters/core';
+
+interface Props {
+  id: string;
+  searchLabel: string;
+  noun: [string, string];
+  groups: FilterGroup[];
+  sorts?: SortOption[];
+  defaultSort?: string;
+  state: FilterState;
+  total: number;
+  items: FilterItem[];
+  /** id of the list element whose children carry data-id */
+  listId?: string;
+  /** the map page initialises the controller itself */
+  manual?: boolean;
+}
+const { id, searchLabel, noun, groups, sorts = [], defaultSort = '', state, total, items, listId, manual = false } = Astro.props;
+const active = activeFilterCount(state);
+const summaryText = summarize(state, groups);
+const showSort = sorts.length >= 2;
+const config = { groups, sorts, defaultSort, items, noun, listId };
+---
+<form class="fbar" method="get" data-filterbar={manual ? 'manual' : 'auto'} id={id} role="search" aria-label={searchLabel}>
+  <div class="fbar__search">
+    <Icon name="search" size={20} />
+    <label class="visually-hidden" for={`${id}-q`}>{searchLabel}</label>
+    <input id={`${id}-q`} data-fq type="search" name="q" value={state.q} placeholder={`${searchLabel}…`} autocomplete="off" enterkeyhint="search" />
+  </div>
+  <div class="fbar__row">
+    {groups.length > 0 && (
+      <button type="button" class="fbar__btn" data-fopen aria-haspopup="dialog" aria-expanded="false" aria-controls={`${id}-panel`} aria-label={active ? `Filters, ${active} active` : 'Filters'}>
+        <Icon name="list" size={18} /> Filters <span class="fcount" data-fcount>{active || ''}</span>
+      </button>
+    )}
+    <p class="fbar__count" data-fresult role="status" aria-live="polite">{total} {total === 1 ? noun[0] : noun[1]}</p>
+    {showSort && (
+      <label class="fbar__sort">
+        <span>Sort</span>
+        <select name="sort" data-fsort>
+          {sorts.map((s) => <option value={s.value} selected={s.value === (state.sort || defaultSort)}>{s.label}</option>)}
+        </select>
+      </label>
+    )}
+    <noscript><button class="btn btn--sm" type="submit">Apply</button></noscript>
+  </div>
+  <div class="fbar__summary" data-fsummary hidden={!summaryText}>
+    <span data-fsummary-text>{summaryText}</span>
+    <button type="button" class="slink" data-fsummary-clear>Clear</button>
+  </div>
+
+  {groups.length > 0 && (
+    <dialog class="fpanel" id={`${id}-panel`} data-fpanel aria-labelledby={`${id}-panel-title`}>
+      <div class="fpanel__head">
+        <h2 class="fpanel__title" id={`${id}-panel-title`}>Filters</h2>
+        <button type="button" class="icon-btn fpanel__close" data-fclose aria-label="Close filters"><Icon name="close" /></button>
+      </div>
+      <div class="fpanel__body">
+        {groups.map((g) => (
+          <fieldset class="fpanel__group">
+            <legend>{g.label}</legend>
+            {g.options.map((o) => (
+              <label class="fpanel__opt">
+                <input type="checkbox" name={g.key} value={o.value} checked={(state.groups[g.key] ?? []).includes(o.value)} />
+                <span>{o.label}</span>
+              </label>
+            ))}
+          </fieldset>
+        ))}
+        <p class="fpanel__draft" data-fdraft aria-live="polite"></p>
+        <p class="fpanel__zero" data-fzero hidden>No {noun[1]} match this combination. Try removing a filter.</p>
+      </div>
+      <div class="fpanel__foot">
+        <button type="button" class="btn btn--ghost btn--sm" data-fclear-all>Clear all</button>
+        <button type="submit" class="btn btn--sm" data-fapply>Show {total} {noun[1]}</button>
+      </div>
+    </dialog>
+  )}
+  <script type="application/json" data-fconfig set:html={JSON.stringify(config)} />
+</form>
+
+<script>
+  import { initFilterBar } from '../../features/filters/ui';
+  document.querySelectorAll<HTMLElement>('[data-filterbar="auto"]').forEach((root) => {
+    const cfg = JSON.parse(root.querySelector('[data-fconfig]')!.textContent || '{}');
+    initFilterBar(root, cfg);
+  });
+</script>
+
+<style is:global>
+  .fbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  @media (min-width: 768px) {
+    .fbar {
+      grid-template-columns: minmax(220px, 420px) minmax(0, 1fr);
+      align-items: center;
+      column-gap: 16px;
+    }
+    .fbar__summary {
+      grid-column: 1 / -1;
+    }
+  }
+  .fbar__search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: var(--white);
+    border: 1.5px solid var(--sand-line);
+    color: var(--muted);
+  }
+  .fbar__search:focus-within {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .fbar__search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    min-height: 44px;
+    color: var(--ink);
+  }
+  .fbar__search input:focus-visible {
+    outline: none;
+  }
+  .fbar__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+  }
+  .fbar__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1.5px solid var(--sand-line);
+    background: var(--white);
+    color: var(--ink);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .fbar__btn:hover {
+    border-color: var(--burgundy);
+  }
+  .fbar__count {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .fbar__sort {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+  .fbar__sort select {
+    min-height: 44px;
+    border-radius: 999px;
+    border: 1.5px solid var(--sand-line);
+    background: var(--white);
+    padding: 0 12px;
+    color: var(--ink);
+  }
+  .fbar__summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--burgundy-dark);
+  }
+  .fbar__summary[hidden] {
+    display: none;
+  }
+
+  .fpanel {
+    border: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--shadow-lift);
+    display: none;
+    flex-direction: column;
+  }
+  .fpanel[open] {
+    display: flex;
+  }
+  .fpanel::backdrop {
+    background: rgb(41 34 31 / 0.35);
+  }
+  .fpanel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 12px 8px 20px;
+    border-bottom: 1px solid var(--sand);
+  }
+  .fpanel__title {
+    font-size: var(--step-1);
+    margin: 0;
+  }
+  .fpanel__body {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px 20px;
+  }
+  .fpanel__group {
+    border: 0;
+    margin: 0 0 8px;
+    padding: 8px 0;
+  }
+  .fpanel__group legend {
+    font-weight: 700;
+    padding: 0;
+    margin-bottom: 4px;
+  }
+  .fpanel__opt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .fpanel__opt input {
+    width: 22px;
+    height: 22px;
+    accent-color: var(--burgundy);
+    flex: none;
+  }
+  .fpanel__draft {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin: 4px 0;
+  }
+  .fpanel__zero {
+    font-size: 0.9rem;
+    color: #8a1c1c;
+    margin: 4px 0;
+  }
+  .fpanel__zero[hidden] {
+    display: none;
+  }
+  .fpanel__foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--sand);
+    background: var(--paper);
+  }
+  .fpanel__foot .btn[data-fapply] {
+    flex: 1;
+    max-width: 260px;
+  }
+  /* Desktop/tablet: popover anchored to the Filters button (position set by script). */
+  @media (min-width: 768px) {
+    .fpanel {
+      position: fixed;
+      margin: 0;
+      border-radius: 18px;
+      max-height: 70vh;
+    }
+    .fpanel::backdrop {
+      background: transparent;
+    }
+  }
+  /* Phones: bottom sheet; apply controls always reachable. */
+  @media (max-width: 767.98px) {
+    .fpanel {
+      width: 100vw;
+      max-width: 100vw;
+      max-height: 85dvh;
+      margin: auto 0 0;
+      border-radius: 20px 20px 0 0;
+    }
+  }
+</style>

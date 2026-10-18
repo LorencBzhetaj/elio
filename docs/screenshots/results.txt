@@ -1,0 +1,15 @@
+PASS variant "thethi" highlights Theth — Theth
+PASS ArrowDown moves active option — hero-q-opt-1
+PASS Escape closes dropdown
+PASS Enter on selected suggestion opens it
+PASS mobile dialog: gjirokastra → Gjirokastër — GjirokastërDestination
+PASS closing dialog restores scroll — 300
+PASS desktop: Escape discards draft
+PASS desktop: draft count shown — Show 1 destination
+PASS desktop: refresh keeps filtered view — 1 destination
+PASS mobile: Escape discards draft
+PASS mobile: draft count shown — Show 1 destination
+PASS mobile: refresh keeps filtered view — 1 destination
+PASS desktop map rendered
+PASS selected card shown
+PASS mobile card above bottom nav — {"cardBottom":694.78125,"navTop":779}

@@ -26,6 +26,11 @@ Set `SANITY_PROJECT_ID` / `SANITY_DATASET` on the website. Until then the site s
 - **Places** are free/public only. Premium-only spots and their coordinates belong in the paid guide.
 - **Guide pages** contain marketing copy only. *Commerce product slug* links to the price and files in
   the database and cannot be changed after creation.
+- **Other spellings** (aliases) help search: e.g. *Thethi*, *Shkodra*. Common variants are also built in.
+- **Map location**: add only checked coordinates; tick *Location verified*. Use precision *town-centre*
+  for a town pin. Never enter locations that belong to a paid guide.
+- **Site settings → Suggested searches**: 4–8 editorial picks shown when the search box is empty
+  (they are not usage statistics).
 - **Site settings → Homepage hero** switches the public homepage between A and B.
 - Drafts never appear on the site. Publishing triggers a rebuild (webhook → `BUILD_HOOK_URL`); if the
   build fails, the previous version stays live — check the hosting dashboard.
@@ -52,6 +57,15 @@ UPDATE products SET fulfillment_version = 2 WHERE slug = 'theth-guide';
 -- Online map link (shown only to buyers; needs internet)
 INSERT INTO product_assets (product_id, version, kind, label, external_url)
 SELECT id, 2, 'map_link', 'Online map', 'https://…' FROM products WHERE slug='theth-guide';
+```
+
+Exact locations that are part of a paid guide (shown only to its buyers on the map):
+
+```sql
+INSERT INTO premium_places (product_id, title, note, lat, lng)
+SELECT id, 'Viewpoint name', 'Short note', 42.0, 19.0 FROM products WHERE slug = 'theth-guide';
+-- remove the seeded TEST points before launch:
+DELETE FROM premium_places WHERE title LIKE 'TEST premium point%';
 ```
 
 Buyers always see the files of the product's current `fulfillment_version`. Set `active=false` to stop

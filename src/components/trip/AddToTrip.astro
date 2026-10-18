@@ -1,15 +1,16 @@
 ---
-/** "Add to my trip" button. Works without an account; stores to this device's browser storage. */
+/** Save / remove toggle for the on-device trip. Same state as the map and My trip (see trip/client.ts). */
 import Icon from '../Icon.astro';
 
 interface Props {
+  /** destination slug, or place:<slug> */
   slug: string;
   title: string;
 }
 const { slug, title } = Astro.props;
 ---
 <div class="add-trip" data-add-trip={slug} data-title={title}>
-  <button class="btn btn--block" type="button" data-add-btn>
+  <button class="btn btn--block" type="button" data-add-btn aria-pressed="false">
     <Icon name="plus" size={18} /> <span data-label>Add to my trip</span>
   </button>
   <p class="add-trip__status" role="status" aria-live="polite" data-status></p>
@@ -17,47 +18,40 @@ const { slug, title } = Astro.props;
 </div>
 
 <script>
-  import { addDestination, findDestination } from '../../features/trip/model';
-  import { loadTrip, saveTrip } from '../../features/trip/storage';
+  import { onTripChange, savedDay, storageAvailable, toggleSaved } from '../../features/trip/client';
 
   document.querySelectorAll<HTMLElement>('[data-add-trip]').forEach((root) => {
-    const slug = root.dataset.addTrip!;
+    const id = root.dataset.addTrip!;
     const title = root.dataset.title!;
     const btn = root.querySelector<HTMLButtonElement>('[data-add-btn]')!;
     const label = root.querySelector<HTMLElement>('[data-label]')!;
     const status = root.querySelector<HTMLElement>('[data-status]')!;
 
     const render = () => {
-      const { trip, status: s } = loadTrip();
-      if (s === 'unavailable') {
+      if (!storageAvailable()) {
         btn.disabled = true;
         status.textContent = 'Your browser is blocking storage, so trips cannot be saved here.';
         return;
       }
-      const pos = findDestination(trip, slug);
-      label.textContent = pos ? `Saved to day ${pos.day + 1}` : 'Add to my trip';
-      btn.setAttribute('aria-pressed', String(Boolean(pos)));
+      const day = savedDay(id);
+      label.textContent = day === null ? 'Add to my trip' : `Saved · day ${day + 1} (remove)`;
+      btn.setAttribute('aria-pressed', String(day !== null));
+      btn.classList.toggle('btn--outline', day !== null);
     };
 
     btn.addEventListener('click', () => {
-      const { trip } = loadTrip();
-      const result = addDestination(trip, slug, 0);
-      if (!result.added) {
-        status.innerHTML = '';
-        status.append(`${title} is already in your trip (day ${result.day + 1}). `);
-      } else if (!saveTrip(result.trip)) {
+      const saved = toggleSaved(id);
+      if (saved === null) {
         status.textContent = 'Could not save — browser storage is full or blocked.';
         return;
-      } else {
-        status.innerHTML = '';
-        status.append(`${title} saved to day 1. `);
       }
+      status.replaceChildren(saved ? `${title} saved to day 1. ` : `${title} removed from your trip. `);
       const a = document.createElement('a');
       a.href = '/my-trip';
-      a.textContent = 'Edit my trip';
+      a.textContent = 'Open my trip';
       status.append(a);
-      render();
     });
+    onTripChange(render);
     render();
   });
 </script>

@@ -8,6 +8,7 @@ import Photo from '../media/Photo.astro';
 import Icon from '../Icon.astro';
 import Logo from '../Logo.astro';
 import Stamp from '../decor/Stamp.astro';
+import SearchBox from '../search/SearchBox.astro';
 import type { HeroProps } from './types';
 
 type Props = Omit<HeroProps, 'variant'>;
@@ -39,12 +40,9 @@ const features = [
       <span class="hero-pano__rule" aria-hidden="true"></span>
     </div>
 
-    <form class="hero-pano__search" action="/search" method="get" role="search">
-      <Icon name="search" size={22} />
-      <label class="visually-hidden" for="hero-q">Search destinations, beaches, towns</label>
-      <input id="hero-q" type="search" name="q" placeholder="Search destinations, beaches, towns…" autocomplete="off" />
-      <button type="submit" aria-label="Search"><Icon name="arrow-right" size={20} /></button>
-    </form>
+    <div class="hero-pano__search">
+      <SearchBox variant="hero" id="hero-q" />
+    </div>
 
     <div class="hero-pano__actions">
       <a class="btn" href={primaryAction.href}>{primaryAction.label} <Icon name="arrow-right" size={18} /></a>
@@ -62,6 +60,7 @@ const features = [
 <style>
   .hero-pano {
     position: relative;
+    z-index: 2; /* keeps the search dropdown above the sections that follow */
     background: var(--cream);
     isolation: isolate;
     margin-top: calc(-1 * var(--header-h));
@@ -133,42 +132,7 @@ const features = [
   }
   .hero-pano__search {
     margin-top: clamp(24px, 5vw, 56px);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--paper);
-    border-radius: 999px;
-    padding: 6px 6px 6px 22px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--sand);
     max-width: 640px;
-  }
-  .hero-pano__search input {
-    flex: 1;
-    min-width: 0;
-    border: 0;
-    background: transparent;
-    min-height: 48px;
-    font-size: 1.02rem;
-  }
-  .hero-pano__search input:focus-visible {
-    outline: none;
-  }
-  .hero-pano__search:focus-within {
-    outline: 3px solid var(--focus);
-    outline-offset: 2px;
-  }
-  .hero-pano__search button {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: 0;
-    background: var(--burgundy);
-    color: var(--white);
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    flex: none;
   }
   .hero-pano__actions {
     display: flex;

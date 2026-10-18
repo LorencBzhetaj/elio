@@ -19,12 +19,17 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
 <BaseLayout title="Travel journal" description="Itineraries, practical tips and stories from across Albania.">
   <PageHeader title="Travel journal" note="Inspiration, practical tips and local stories." intro="Inspiration, practical tips and stories from across Albania." />
   <div class="container section" style="padding-top: 8px">
-    <nav aria-label="Filter by category">
-      <ul class="filter-pills">
-        <li><a href="/journal" aria-current={!cat ? 'true' : undefined}>All</a></li>
-        {articleCategories.map((c) => <li><a href={`/journal?category=${c}`} aria-current={cat === c ? 'true' : undefined}>{label(c)}</a></li>)}
-      </ul>
-    </nav>
+    <form class="jfilter" method="get" aria-label="Filter stories">
+      <label>
+        <span>Category</span>
+        <select name="category" data-autosubmit>
+          <option value="">All stories</option>
+          {articleCategories.filter((c) => articles.some((a) => a.category === c)).map((c) => <option value={c} selected={cat === c}>{label(c)}</option>)}
+        </select>
+      </label>
+      <noscript><button class="btn btn--sm" type="submit">Apply</button></noscript>
+      <p class="muted jfilter__count" role="status">{list.length} {list.length === 1 ? 'story' : 'stories'}</p>
+    </form>
     {lead ? (
       <>
         <article class="jlead">
@@ -55,7 +60,36 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
   </div>
 </BaseLayout>
 
+<script>
+  document.querySelectorAll<HTMLSelectElement>('[data-autosubmit]').forEach((sel) => sel.addEventListener('change', () => sel.form?.requestSubmit()));
+</script>
+
 <style>
+  .jfilter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    margin-bottom: 16px;
+  }
+  .jfilter label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .jfilter select {
+    min-height: 44px;
+    border-radius: 999px;
+    border: 1.5px solid var(--sand-line);
+    background: var(--white);
+    padding: 0 14px;
+    color: var(--ink);
+  }
+  .jfilter__count {
+    margin: 0;
+  }
   .jlead {
     position: relative;
     border-radius: var(--radius-lg);

@@ -1,4 +1,5 @@
-import type { ContentBundle } from '../features/content/schemas';
+import type { z } from 'zod';
+import type { contentBundle } from '../features/content/schemas';
 
 /**
  * LOCAL SAMPLE CONTENT — used only when Sanity is not configured.
@@ -8,12 +9,15 @@ import type { ContentBundle } from '../features/content/schemas';
  *  - No prices, opening hours, distances, ratings, reviews, statistics, coordinates or events are invented.
  *    Where an editor must supply a fact, a `todo` block marks the gap.
  *  - No photos: each image slot names the licensed photo still needed and renders an illustration.
+ *  - Map locations are approximate TOWN CENTRES only, flagged `verified: false`; places have none.
  *  - Events list is intentionally EMPTY: real events need organiser sources and a lastCheckedAt date.
  */
 const UPDATED = '2026-10-18';
 
-export const fixtures: ContentBundle = {
+/** Schema INPUT type: defaults (e.g. aliases, verified) are applied when the bundle is parsed. */
+export const fixtures: z.input<typeof contentBundle> = {
   settings: {
+    suggestedSearches: ['Beaches', 'Hiking', 'Old towns', 'Getting around'],
     heroCollage: {
       heading: 'Postcards from Albania',
       description: 'Free travel essentials for mountains, coast and old towns — plus optional digital guides when you want a ready-made plan.',
@@ -67,6 +71,9 @@ export const fixtures: ContentBundle = {
       relatedGuideProductId: 'theth-guide',
       relatedArticleSlugs: ['hiking-in-theth'],
       featured: true,
+      aliases: ['Thethi'],
+      // Approximate town centre for the sample map. NOT verified — check before launch.
+      location: { lat: 42.3953, lng: 19.7744, precision: 'town-centre', verified: false },
     },
     {
       slug: 'ksamil',
@@ -89,6 +96,9 @@ export const fixtures: ContentBundle = {
       relatedGuideProductId: 'albania-explorer',
       relatedArticleSlugs: [],
       featured: true,
+      aliases: ['Ksamili'],
+      // Approximate town centre for the sample map. NOT verified — check before launch.
+      location: { lat: 39.77, lng: 20.0003, precision: 'town-centre', verified: false },
     },
     {
       slug: 'berat',
@@ -111,6 +121,9 @@ export const fixtures: ContentBundle = {
       relatedGuideProductId: 'albania-explorer',
       relatedArticleSlugs: [],
       featured: true,
+      aliases: ['Berati'],
+      // Approximate town centre for the sample map. NOT verified — check before launch.
+      location: { lat: 40.7058, lng: 19.9522, precision: 'town-centre', verified: false },
     },
     {
       slug: 'gjirokaster',
@@ -133,6 +146,9 @@ export const fixtures: ContentBundle = {
       relatedGuideProductId: 'albania-explorer',
       relatedArticleSlugs: [],
       featured: false,
+      aliases: ['Gjirokastra','Gjirokaster'],
+      // Approximate town centre for the sample map. NOT verified — check before launch.
+      location: { lat: 40.0758, lng: 20.1389, precision: 'town-centre', verified: false },
     },
     {
       slug: 'tirana',
@@ -154,6 +170,9 @@ export const fixtures: ContentBundle = {
       placeSlugs: [],
       relatedArticleSlugs: ['getting-around-albania'],
       featured: false,
+      aliases: ['Tiranë','Tirane'],
+      // Approximate town centre for the sample map. NOT verified — check before launch.
+      location: { lat: 41.3275, lng: 19.8187, precision: 'town-centre', verified: false },
     },
     {
       slug: 'shkoder',
@@ -176,6 +195,9 @@ export const fixtures: ContentBundle = {
       relatedGuideProductId: 'theth-guide',
       relatedArticleSlugs: [],
       featured: false,
+      aliases: ['Shkodra','Shkodër','Scutari'],
+      // Approximate town centre for the sample map. NOT verified — check before launch.
+      location: { lat: 42.0683, lng: 19.5126, precision: 'town-centre', verified: false },
     },
   ],
 

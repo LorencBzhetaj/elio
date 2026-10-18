@@ -1,0 +1,372 @@
+---
+/**
+ * The one search component used in the hero, the header/mobile search dialog and the /search page.
+ * Without JavaScript the form still submits to /search (server-rendered results).
+ */
+import Icon from '../Icon.astro';
+import { loadContent } from '../../features/content/queries';
+import { buildSearchIndex, searchRegions, SEARCH_TYPES } from '../../features/content/search';
+
+interface Props {
+  variant: 'hero' | 'dialog' | 'page';
+  id: string;
+  query?: string;
+  type?: string;
+  region?: string;
+  placeholder?: string;
+  label?: string;
+}
+const { variant, id, query = '', type = '', region = '', placeholder = 'Search destinations, beaches, towns…', label = 'Search destinations, beaches, towns' } = Astro.props;
+const regions = searchRegions(buildSearchIndex(await loadContent()));
+const regionLabel: Record<string, string> = { north: 'North', central: 'Central', south: 'South', coast: 'Coast' };
+const showRegion = regions.length >= 2;
+---
+<div class:list={['sbox', `sbox--${variant}`]} data-search data-variant={variant}>
+  <form class="sbox__form" action="/search" method="get" role="search">
+    <label class="visually-hidden" for={id}>{label}</label>
+    <Icon name="search" size={22} class="sbox__icon" />
+    <input
+      id={id}
+      data-input
+      class="sbox__input"
+      type="search"
+      name="q"
+      value={query}
+      placeholder={placeholder}
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      enterkeyhint="search"
+      role="combobox"
+      aria-autocomplete="list"
+      aria-expanded={variant === 'hero' ? 'false' : 'true'}
+      aria-controls={`${id}-list`}
+      aria-describedby={`${id}-status`}
+    />
+    <button type="button" class="sbox__clear" data-clear aria-label="Clear search" hidden={!query}><Icon name="close" size={18} /></button>
+    {variant === 'hero' && <button type="submit" class="sbox__go" aria-label="Show results"><Icon name="arrow-right" size={20} /></button>}
+    <slot name="after-input" />
+  </form>
+
+  <div class="sbox__panel" id={`${id}-panel`} data-panel hidden={variant === 'hero'}>
+    <div class="sbox__controls">
+      <label class="sbox__type">
+        <span>Content type</span>
+        <select data-type name="type" form="">
+          <option value="">All</option>
+          {SEARCH_TYPES.map((t) => <option value={t.id} selected={t.id === type}>{t.label}</option>)}
+        </select>
+      </label>
+      {showRegion && (
+        <button type="button" class="sbox__filters-btn" data-filters-toggle aria-expanded={region ? 'true' : 'false'} aria-controls={`${id}-filters`}>
+          <Icon name="list" size={16} /> Filters <span class="sbox__count" data-filter-count></span>
+        </button>
+      )}
+      <button type="button" class="slink" data-clear-filters hidden>Clear filters</button>
+    </div>
+    {showRegion && (
+      <div class="sbox__filters" id={`${id}-filters`} data-filters hidden={!region}>
+        <label>
+          <span>Region</span>
+          <select data-region name="region" form="">
+            <option value="">Anywhere</option>
+            {regions.map((r) => <option value={r} selected={r === region}>{regionLabel[r] ?? r}</option>)}
+          </select>
+        </label>
+      </div>
+    )}
+    <p class="sbox__status" id={`${id}-status`} data-status role="status" aria-live="polite"></p>
+    <ul class="sbox__list" id={`${id}-list`} data-list role="listbox" aria-label="Search suggestions"></ul>
+    <button type="button" class="sbox__more" data-more hidden>Show more</button>
+    <slot />
+  </div>
+</div>
+
+<script>
+  import { initSearchBox } from '../../features/search/ui';
+
+  const mobile = matchMedia('(max-width: 767.98px)');
+  document.querySelectorAll<HTMLElement>('[data-search]').forEach((root) => {
+    const variant = root.dataset.variant;
+    if (variant === 'dialog') return; // initialised by SearchDialog
+    if (variant === 'hero') {
+      const input = root.querySelector<HTMLInputElement>('[data-input]')!;
+      // On phones the hero field opens the full-screen search dialog instead of a dropdown.
+      const toDialog = (e: Event) => {
+        if (!mobile.matches) return;
+        e.preventDefault();
+        input.blur();
+        window.dispatchEvent(new CustomEvent('search:open', { detail: { query: input.value, opener: input } }));
+      };
+      input.addEventListener('pointerdown', toDialog);
+      input.addEventListener('focus', toDialog);
+      initSearchBox(root, { variant: 'inline', suppress: () => mobile.matches });
+    } else {
+      initSearchBox(root, { variant: 'page', syncUrl: true });
+    }
+  });
+</script>
+
+<style is:global>
+  .sbox {
+    position: relative;
+  }
+  .sbox__form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--paper);
+    border-radius: 999px;
+    padding: 4px 6px 4px 18px;
+    border: 1px solid var(--sand);
+    box-shadow: var(--shadow);
+  }
+  .sbox__form:focus-within {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .sbox__icon {
+    flex: none;
+    color: var(--muted);
+  }
+  .sbox__input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    min-height: 48px;
+    font-size: 1.02rem;
+  }
+  .sbox__input:focus-visible {
+    outline: none;
+  }
+  .sbox__input::-webkit-search-cancel-button {
+    display: none;
+  }
+  .sbox__clear,
+  .sbox__go {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 0;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  .sbox__clear {
+    background: var(--cream-deep);
+    color: var(--ink);
+  }
+  .sbox__go {
+    width: 48px;
+    height: 48px;
+    background: var(--burgundy);
+    color: #fff;
+  }
+  .sbox__clear[hidden] {
+    display: none;
+  }
+
+  .sbox__panel {
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .sbox__panel[hidden] {
+    display: none;
+  }
+  /* Inline dropdown (hero): anchored to the field, bounded height, scrolls inside, never shifts the page. */
+  .sbox--hero .sbox__panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: max(100%, min(560px, calc(100vw - 2 * var(--gutter))));
+    max-height: min(70vh, 560px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    z-index: 70;
+    border-radius: 18px;
+    border: 1px solid var(--sand);
+    box-shadow: var(--shadow-lift);
+    padding: 10px;
+  }
+  .sbox--page .sbox__panel {
+    margin-top: 12px;
+    border-radius: 18px;
+    border: 1px solid var(--sand);
+    padding: 10px;
+  }
+
+  .sbox__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 2px 4px 8px;
+    border-bottom: 1px solid var(--sand);
+  }
+  .sbox__type,
+  .sbox__filters label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .sbox__type select,
+  .sbox__filters select {
+    min-height: 40px;
+    border-radius: 999px;
+    border: 1px solid var(--sand-line);
+    background: var(--white);
+    padding: 0 12px;
+    color: var(--ink);
+    font-size: 0.92rem;
+  }
+  .sbox__filters-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--sand-line);
+    background: var(--white);
+    cursor: pointer;
+    font-size: 0.92rem;
+  }
+  .sbox__filters-btn[aria-expanded='true'] {
+    border-color: var(--burgundy);
+  }
+  .sbox__count:not(:empty),
+  .fcount:not(:empty) {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--burgundy);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .sbox__filters {
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--sand);
+  }
+  .sbox__filters[hidden] {
+    display: none;
+  }
+  .slink {
+    background: none;
+    border: 0;
+    padding: 0 4px;
+    min-height: 40px;
+    color: var(--burgundy);
+    text-decoration: underline;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.92rem;
+  }
+  .slink[hidden] {
+    display: none;
+  }
+  .sbox__status {
+    margin: 8px 6px;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+  .sbox__status:empty {
+    display: none;
+  }
+  .sbox__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .sgroup {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 12px 8px 4px;
+  }
+  .sopt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 12px;
+    cursor: pointer;
+    min-height: 56px;
+  }
+  .sopt:hover {
+    background: var(--cream);
+  }
+  .sopt[aria-selected='true'] {
+    background: var(--burgundy-tint);
+    outline: 2px solid var(--burgundy);
+    outline-offset: -2px;
+  }
+  .sopt__text {
+    display: grid;
+    min-width: 0;
+  }
+  .sopt__title {
+    font-weight: 600;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+  .sopt__title mark {
+    background: none;
+    color: var(--burgundy);
+    font-weight: 800;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
+  }
+  .sopt__meta {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sthumb {
+    flex: none;
+    width: 56px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--sand);
+  }
+  .sthumb--coast { background: linear-gradient(180deg, #9fcfe9 0 45%, #2aa7bb 45% 75%, #6d8a45 75%); }
+  .sthumb--beach { background: linear-gradient(170deg, #9fcfe9 0 35%, #2aa7bb 35% 65%, #f3e3c3 65%); }
+  .sthumb--mountains { background: linear-gradient(160deg, #cfe6f2 0 30%, #6f86a6 30% 62%, #6e9a4c 62%); }
+  .sthumb--lake { background: linear-gradient(180deg, #cfe6f2 0 30%, #4f6a7f 30% 55%, #2b9fa5 55%); }
+  .sthumb--town { background: linear-gradient(180deg, #cfe6f2 0 30%, #e9dcc6 30% 60%, #c4553b 60% 66%, #8a9a5b 66%); }
+  .sthumb--city { background: linear-gradient(90deg, #e8b04b 0 25%, #d86f5a 25% 50%, #7fb3a6 50% 75%, #c98fb0 75%); }
+  .sthumb--sunset { background: linear-gradient(180deg, #f4a37a 0 45%, #7c6a8f 45% 80%, #574639 80%); }
+  .sthumb--food { background: radial-gradient(circle at 35% 50%, #d9633f 0 22%, #f3ead7 23% 33%, transparent 34%), #9b6340; }
+  .sthumb--query {
+    width: 44px;
+    background: var(--cream-deep) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2370675d' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.6-3.6'/%3E%3C/svg%3E") center / 20px no-repeat;
+  }
+  .sbox__more {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    min-height: 44px;
+    border-radius: 12px;
+    border: 1px dashed var(--sand-line);
+    background: transparent;
+    color: var(--burgundy);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .sbox__more[hidden] {
+    display: none;
+  }
+</style>

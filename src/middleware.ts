@@ -4,6 +4,8 @@ import { loadDotEnvOnce } from './config/env';
 
 const PRIVATE_PREFIXES = ['/checkout', '/order', '/access', '/my-guides', '/admin', '/mock-pay', '/api', '/preview'];
 const NOINDEX_PREFIXES = [...PRIVATE_PREFIXES, '/search'];
+/** Public, cacheable API responses built from published content only (they set their own Cache-Control). */
+const PUBLIC_API = ['/api/search', '/api/map/points'];
 const startsWithAny = (path: string, prefixes: string[]) => prefixes.some((p) => path === p || path.startsWith(p + '/'));
 
 const digest = (s: string) => createHash('sha256').update(s).digest();
@@ -55,7 +57,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     h.set('X-Frame-Options', 'SAMEORIGIN');
     h.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
     if (url.protocol === 'https:') h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    if (startsWithAny(path, PRIVATE_PREFIXES)) {
+    if (startsWithAny(path, PRIVATE_PREFIXES) && !PUBLIC_API.includes(path)) {
       h.set('Cache-Control', 'no-store, private');
     }
     if (startsWithAny(path, NOINDEX_PREFIXES)) h.set('X-Robots-Tag', 'noindex, nofollow');

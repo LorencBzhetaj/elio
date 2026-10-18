@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { createDb } from '../src/db/client';
 import { migrateDb } from '../src/db/migrate';
-import { productAssets, products } from '../src/db/schema';
+import { premiumPlaces, productAssets, products } from '../src/db/schema';
 import { serverEnv } from '../src/config/env';
 
 const env = serverEnv();
@@ -80,6 +80,16 @@ for (const item of catalogue) {
     ]);
     console.info(`  + placeholder asset ${key}`);
   }
+}
+// TEST premium locations for the Theth Guide, to exercise the buyer-only map layer.
+// Clearly labelled; replace with the real guide locations (see docs/admin-guide.md).
+const [theth] = await db.select().from(products).where(eq(products.slug, 'theth-guide'));
+if (theth && (await db.select().from(premiumPlaces).where(eq(premiumPlaces.productId, theth.id))).length === 0) {
+  await db.insert(premiumPlaces).values([
+    { productId: theth.id, title: 'TEST premium point A', note: 'Placeholder — not a real location', lat: 42.401, lng: 19.781 },
+    { productId: theth.id, title: 'TEST premium point B', note: 'Placeholder — not a real location', lat: 42.389, lng: 19.769 },
+  ]);
+  console.info('  + 2 TEST premium points (theth-guide)');
 }
 console.info('Seed complete (test catalogue).');
 await close();

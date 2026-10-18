@@ -85,3 +85,26 @@ export const editorialFields = [
   defineField({ name: 'seoDescription', title: 'SEO description', type: 'string', validation: (r) => r.max(160) }),
   defineField({ name: 'canonical', title: 'Canonical URL (optional)', type: 'url' }),
 ];
+
+/** Public map location. Leave empty rather than guessing; tick "verified" only after checking it. */
+export const geoPointField = (name = 'location', title = 'Map location') =>
+  defineField({
+    name,
+    title,
+    type: 'object',
+    description: 'Public pin. Never add locations that are part of a paid guide.',
+    fields: [
+      { name: 'lat', title: 'Latitude', type: 'number', validation: (r) => r.required().min(-90).max(90) },
+      { name: 'lng', title: 'Longitude', type: 'number', validation: (r) => r.required().min(-180).max(180) },
+      { name: 'precision', type: 'string', options: { list: ['exact', 'town-centre', 'area'] }, initialValue: 'exact' },
+      { name: 'verified', title: 'Location verified', type: 'boolean', initialValue: false },
+    ],
+  });
+
+export const aliasesField = defineField({
+  name: 'aliases',
+  title: 'Other spellings (for search)',
+  type: 'array',
+  of: [{ type: 'string' }],
+  description: 'e.g. Thethi, Shkodra. Helps search find this page.',
+});

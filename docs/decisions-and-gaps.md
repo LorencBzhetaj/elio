@@ -9,6 +9,7 @@
 | Payment provider: Paysera or POK | `PAYMENT_PROVIDER` + adapter implementation | `mock` |
 | Charge/display currency and final prices | `products` table (`currency`, `price_minor`) | Test prices $5 / $9 / $15, flagged as test |
 | Hosting platform + transactional email vendor | env vars; see `deployment.md` | none |
+| Map tile provider for production (OpenFreeMap has no SLA) | `PUBLIC_MAP_STYLE_URL` — see `map.md` | OpenFreeMap positron (dev/staging) |
 | CMS editors (who gets Sanity access) | Sanity project members | none |
 | Admin users | `ADMIN_EMAILS` | `owner@example.com` placeholder |
 
@@ -19,15 +20,18 @@
 2. **Verified content** — all destinations, essentials, places, articles and pages are `verified: false`
    and contain “Content to come” blocks where facts are needed. No facts, prices, times, ratings or
    reviews were invented.
-3. **Events** — none published. Each needs organiser URL, source URL and last-checked date.
-4. **Real guide PDFs and map links** — seed creates one-page placeholder PDFs saying “TEST PLACEHOLDER”.
+3. **Map locations** — destinations only have approximate town centres (`verified: false`, shown with a
+   note); places have none. Editors must add/verify coordinates, then set `PUBLIC_MAP_SHOW_UNVERIFIED=false`.
+   Real premium guide locations go in `premium_places` (seed adds 2 TEST points).
+4. **Events** — none published. Each needs organiser URL, source URL and last-checked date.
+5. **Real guide PDFs and map links** — seed creates one-page placeholder PDFs saying “TEST PLACEHOLDER”.
    Upload final files to private storage and add `product_assets` rows (see `admin-guide.md`).
-5. **Seller policies** — privacy, terms, refund policy are outlines marked “Draft — not legally reviewed”.
+6. **Seller policies** — privacy, terms, refund policy are outlines marked “Draft — not legally reviewed”.
    Must be written/reviewed (incl. EU consumer rules for digital content if selling to EU buyers) before
    real payments.
-6. **Merchant approval** and the provider's current API documentation (see `payments-integration-note.md`).
-7. **Support email** — `PUBLIC_SUPPORT_EMAIL` placeholder.
-8. **Invoicing / tax** — separate decision; gateway receipts may not satisfy local requirements.
+7. **Merchant approval** and the provider's current API documentation (see `payments-integration-note.md`).
+8. **Support email** — `PUBLIC_SUPPORT_EMAIL` placeholder.
+9. **Invoicing / tax** — separate decision; gateway receipts may not satisfy local requirements.
 
 ## Deliberately not built (scope)
 
@@ -40,5 +44,6 @@ reviews/ratings, a second live payment gateway, theme picker for visitors.
 - A downloaded PDF and a shared map link cannot be recalled; signed URLs can be shared for 60 s.
 - In-memory IP rate limiter is per process; add a proxy/WAF limit when running several instances.
 - Static (prerendered) pages get security headers from the host, not from Astro middleware.
+- The trip planner script includes zod (~80 kB); could move to `zod/mini` if page weight matters.
 - `drizzle-kit` (dev-only) pulls an `esbuild` version with a moderate advisory affecting its dev server;
   not used at runtime.

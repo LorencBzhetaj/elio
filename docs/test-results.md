@@ -66,3 +66,43 @@ Run on 18 October 2026, Windows 11, Node 24.11.1, Astro 7.4.0, local PGlite data
 - Lighthouse/LCP measurements (no real photos yet — measure after licensed images are added).
 - Tablet 768 px and real devices / safe-area insets on iOS.
 - Any real payment provider (none selected).
+
+---
+
+## Update — search, filters, interactive map (18 October 2026)
+
+| Check | Result |
+|---|---|
+| `npm run check` | 0 errors |
+| `npm test` | **85 / 85** (9 files; +25 for search, filters, map, premium access) |
+| `npm run build` + public scan | OK; scan now also fails on premium-location strings |
+| Sanity Studio `tsc` | OK |
+| Browser checks (Playwright, headless Chromium, real keyboard/touch) | **15 / 15** — see `docs/screenshots/results.txt` |
+
+New automated coverage:
+- **Search**: ë/e, ç/c, case; name variants (Thethi→Theth, Shkodra→Shkodër, Gjirokastra→Gjirokastër);
+  ranking exact → prefix → title → content; 2-letter minimum; type + region filters with text; results
+  show linked destination; payload whitelist; no coordinates/prices/keys/premium; empty state =
+  editorial picks; **out-of-order responses** (older slow request never overwrites newer; previous
+  request aborted).
+- **Filters**: OR within a group, AND across groups and with text; sorting; URL round-trip; unknown
+  values rejected; summary text; groups only when ≥2 real values; events with no data → no filters.
+- **Map**: no invented pins (places without coordinates listed separately); unverified pins hidden when
+  configured; map-area + text + category combined; public payload has no premium/private fields.
+- **Premium map**: only buyers of that guide get the points; refund removes them; public preview is a count.
+- **Trip**: `place:` ids, no duplicates, invalid ids rejected.
+
+Browser (Playwright 1.64, 1440×900 and 390×844 touch):
+keyboard ArrowDown/Escape/Enter in the hero combobox; mobile full-screen search; closing restores
+scroll; filter panel Escape discards draft; "Show N" count; refresh keeps filters; desktop map renders
+with selected card; mobile card stays above the bottom navigation.
+
+Manual (in-app browser): suggestions overlay the next section (not clipped); dialog focus returns to the
+opener; search error state + retry; Apply/close-without-apply/Back on Destinations; map pan shows
+"Search this area" only after a user move; area filter + "show all places"; save/remove sync between
+card, list and My trip without duplicates; buyer-only guide places after a mock purchase (listed even if
+the map fails); map with an unreachable tile server shows the fallback and the list still works.
+No horizontal overflow at 320, 360, 390, 768, 1280 px and at 390 px with 200 % text.
+
+Not verified: real iOS/Android devices (on-screen keyboard behaviour is handled via `visualViewport`
+but only emulated), a paid tile provider, Lighthouse.

@@ -6,6 +6,7 @@ import SpotCard from '../cards/SpotCard.astro';
 import ArticleCard from '../cards/ArticleCard.astro';
 import Photo from '../media/Photo.astro';
 import Icon from '../Icon.astro';
+import MapPreview from '../map/MapPreview.astro';
 import type { ContentBundle } from '../../features/content/schemas';
 import type { CatalogPrice } from '../../features/commerce/catalog';
 import { upcomingEvents, formatEventDate } from '../../features/content/events';
@@ -35,6 +36,8 @@ const events = upcomingEvents(content.events).slice(0, 3);
     </ul>
   </div>
 </section>
+
+<MapPreview />
 
 <section class="section section--tint" aria-labelledby="h-free">
   <div class="container">

@@ -9,6 +9,21 @@ digital guides sold as one-time purchases. Built from the brief in [`docs/brief/
 
 Owner guide in Albanian: [`docs/UDHEZUES-PRONARI.md`](docs/UDHEZUES-PRONARI.md).
 
+## Search, filters and map
+
+- **Search as you type** in the hero and header (one component; full-screen dialog on phones), over
+  published content via `GET /api/search`. Accent- and variant-insensitive (Thethi/Theth, ë/e, ç/c),
+  ranked exact → prefix → title → content, with Content type and Region filters. `/search?q=` links
+  still work and open the same interface.
+- **Listing toolbar** on Destinations, Guides, Photo spots and Events: one search field, a *Filters*
+  popover / bottom sheet (draft until "Show N"), result count and Sort only where useful. State lives in
+  the URL (refresh/Back work). No rows of pills.
+- **Interactive map** at `/map` plus a homepage preview: MapLibre + OpenFreeMap tiles (configurable),
+  clustering, list↔map sync, "Search this area", save to My trip, buyer-only guide locations from an
+  authorised endpoint. Details, licence and provider choice: [`docs/map.md`](docs/map.md).
+
+Screenshots: [`docs/screenshots/`](docs/screenshots/).
+
 ## Quick start
 
 Requirements: Node.js ≥ 22.22 (tested on 24.11). No database install needed for local development —
@@ -103,7 +118,7 @@ email link → HttpOnly 7-day session → `/my-guides`. No account is required.
 
 ## Verification (latest run)
 
-See [`docs/test-results.md`](docs/test-results.md). Summary: type-check 0 errors; 60/60 tests;
+See [`docs/test-results.md`](docs/test-results.md). Summary: type-check 0 errors; 85/85 tests; 15/15 Playwright browser checks;
 production build + private-output scan pass; Sanity Studio builds; browser checks at
 320/360/390/1024/1440 px and 200 % text; full mock purchase on the production build. Not yet run:
 tests against real PostgreSQL, 768 px tablet pass, real devices, Lighthouse.

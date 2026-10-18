@@ -7,7 +7,8 @@ import { z } from 'zod';
 export const MAX_DAYS = 30;
 export const MAX_PER_DAY = 40;
 
-const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(120);
+/** A destination slug, or `place:<slug>` for a photo spot / place. */
+const slug = z.string().regex(/^(?:place:)?[a-z0-9]+(?:-[a-z0-9]+)*$/).max(130);
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 export const savedTripSchema = z.object({

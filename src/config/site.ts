@@ -46,6 +46,7 @@ export function envHeroVariant(): HeroVariant {
 
 export const mainNav = [
   { href: '/destinations', label: 'Destinations' },
+  { href: '/map', label: 'Map' },
   { href: '/essentials', label: 'Essentials' },
   { href: '/photo-spots', label: 'Photo spots' },
   { href: '/journal', label: 'Journal' },

@@ -28,6 +28,21 @@ export const imageRef = z.object({
 });
 export type ImageRef = z.infer<typeof imageRef>;
 
+/**
+ * A public map location. `verified` stays false until an editor has checked it on the ground or
+ * against an authoritative source; unverified points are only shown while PUBLIC_MAP_SHOW_UNVERIFIED is on.
+ */
+export const geoPoint = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  precision: z.enum(['exact', 'town-centre', 'area']).default('exact'),
+  verified: z.boolean().default(false),
+});
+export type GeoPoint = z.infer<typeof geoPoint>;
+
+/** Alternative spellings people search for (e.g. Thethi, Shkodra). */
+const aliases = z.array(z.string().min(1)).default([]);
+
 const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase-kebab-case');
 
 const editorial = {
@@ -73,6 +88,8 @@ export const destination = z.object({
   relatedGuideProductId: z.string().optional(),
   relatedArticleSlugs: z.array(slug).default([]),
   featured: z.boolean().default(false),
+  aliases,
+  location: geoPoint.optional(),
 });
 export type Destination = z.infer<typeof destination>;
 
@@ -108,6 +125,7 @@ export const place = z.object({
   /** Public coordinates for FREE spots only. Null until verified. */
   coordinates: z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }).nullable().default(null),
   relatedGuideProductId: z.string().optional(),
+  aliases,
 });
 export type Place = z.infer<typeof place>;
 
@@ -124,6 +142,7 @@ export const event = z
     organizerUrl: z.url(),
     sourceUrl: z.url(),
     lastCheckedAt: z.string(),
+    location: geoPoint.optional(),
   })
   .refine((e) => !e.end || e.end >= e.start, { message: 'Event end must be after start', path: ['end'] });
 export type TravelEvent = z.infer<typeof event>;
@@ -151,6 +170,8 @@ export const siteSettings = z.object({
   brandName: z.string().optional(),
   tagline: z.string().optional(),
   homepageHeroVariant: z.enum(['collage', 'panorama']).optional(),
+  /** Editorially chosen search shortcuts shown when the search field is empty (not usage statistics). */
+  suggestedSearches: z.array(z.string().min(1)).default([]),
   heroCollage: z.object({ heading: z.string(), description: z.string(), media: z.array(imageRef).min(3) }),
   heroPanorama: z.object({ heading: z.string(), description: z.string(), media: z.array(imageRef).min(1) }),
 });

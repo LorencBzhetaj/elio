@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -239,3 +240,25 @@ export const mockProviderPayments = pgTable('mock_provider_payments', {
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
+
+/**
+ * Exact locations that are part of a PAID guide. Never exposed by public content, search or map
+ * payloads; served only by /api/map/premium after an entitlement check.
+ */
+export const premiumPlaces = pgTable(
+  'premium_places',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    productId: uuid('product_id').notNull().references(() => products.id),
+    title: text('title').notNull(),
+    note: text('note'),
+    lat: doublePrecision('lat').notNull(),
+    lng: doublePrecision('lng').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('premium_places_product_idx').on(t.productId),
+    check('premium_places_lat', sql`${t.lat} between -90 and 90`),
+    check('premium_places_lng', sql`${t.lng} between -180 and 180`),
+  ],
+);

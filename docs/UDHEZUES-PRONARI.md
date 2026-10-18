@@ -14,6 +14,15 @@
 - Paneli i porosive për pronarin: `/admin/orders` (kërkim, sinkronizim me ofruesin, ridërgim emaili, revokim aksesi, histori veprimesh).
 - CMS (Sanity) në dosjen `cms/` për të redaktuar përmbajtjen.
 
+## Kërkimi, filtrat dhe harta (përditësim)
+
+- **Kërkim me sugjerime** në hero dhe header (në telefon hapet në ekran të plotë). Gjen pa marrë parasysh ë/e, ç/c dhe variantet e emrave (Thethi/Theth, Shkodra/Shkodër).
+- **Filtra të thjeshtë**: një fushë kërkimi, butoni “Filters” (panel/bottom sheet), numri i rezultateve dhe “Sort” vetëm kur duhet. Gjendja ruhet në URL.
+- **Hartë interaktive** te `/map` dhe preview në homepage. Përdor MapLibre + OpenFreeMap (falas, pa çelës, por pa garanci shërbimi). Për publikim rekomandoj MapTiler/Stadia ose self-hosting — shih `docs/map.md`.
+- Destinacionet kanë vetëm koordinata të përafërta të qendrës së qytetit, të shënuara “to verify”. Photo spots nuk kanë ende koordinata dhe shfaqen te “Not on the map yet”.
+- Vendet premium të guidave shfaqen në hartë vetëm për blerësit (tani janë 2 pika TEST).
+- Pamjet: `docs/screenshots/`.
+
 ## Si ta nisni në kompjuter
 
 ```bash

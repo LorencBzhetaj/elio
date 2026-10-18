@@ -17,6 +17,8 @@ export default defineConfig({
   output: 'static',
   trailingSlash: 'never',
   security: { checkOrigin: true },
+  // Keep client previews clean (the dev toolbar would overlay the page).
+  devToolbar: { enabled: false },
   integrations: [
     sitemap({
       filter: (page) => !PRIVATE_PREFIXES.some((p) => new URL(page).pathname.startsWith(p)),

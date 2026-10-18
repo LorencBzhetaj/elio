@@ -12,6 +12,14 @@ export const prerender = false;
 const g = await findBySlug('guides', Astro.params.slug ?? '');
 if (!g) return Astro.rewrite('/404');
 const prices = await loadDisplayPrices();
+// Public preview of premium map content: a count only, never positions.
+let premiumCount = 0;
+try {
+  const [{ getDb }, { premiumPlaceCount }] = await Promise.all([import('../../db/client'), import('../../features/map/premium')]);
+  premiumCount = await premiumPlaceCount(await getDb(), g.productSlug);
+} catch {
+  premiumCount = 0;
+}
 const price = prices?.get(g.productSlug);
 const content = await loadContent();
 const dests = content.destinations.filter((d) => g.destinationSlugs.includes(d.slug));
@@ -53,6 +61,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
           <li><Icon name="book" size={20} /><span><strong>Language</strong> {g.language}</span></li>
           <li><Icon name="wifi-off" size={20} /><span><strong>Online / offline</strong> {g.onlineOffline}</span></li>
           <li><Icon name="clock" size={20} /><span><strong>Updates</strong> {g.updatePolicy}</span></li>
+          {premiumCount > 0 && <li><Icon name="map" size={20} /><span><strong>Exact locations</strong> {premiumCount} places, shown on your <a href="/map">map</a> after purchase (needs internet).</span></li>}
         </ul>
       </div>
     </div>

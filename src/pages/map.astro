@@ -1,0 +1,367 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import FilterBar from '../components/filters/FilterBar.astro';
+import Icon from '../components/Icon.astro';
+import { loadContent } from '../features/content/queries';
+import { buildMapItems, mapGroups, ALBANIA_BOUNDS } from '../features/map/data';
+import { applyFilters, readState } from '../features/filters/core';
+import { mapConfig } from '../features/map/config';
+import { currentSession } from '../lib/session';
+import { listOwnedGuides } from '../features/access/downloads';
+import { getDb } from '../features/services';
+
+export const prerender = false;
+
+const content = await loadContent();
+const items = buildMapItems(content);
+const groups = mapGroups(items);
+const state = readState(Astro.url.searchParams, groups, [], '');
+const visible = applyFilters(items, state);
+// Only a yes/no flag goes into the page; premium coordinates are fetched later from an authorised endpoint.
+let hasGuides = false;
+try {
+  const session = await currentSession(Astro.cookies);
+  hasGuides = session ? (await listOwnedGuides(await getDb(), session.email)).length > 0 : false;
+} catch {
+  hasGuides = false;
+}
+const { styleUrl, font } = mapConfig();
+const config = { groups, sorts: [], defaultSort: '', items, noun: ['place', 'places'], styleUrl, font, bounds: ALBANIA_BOUNDS };
+Astro.response.headers.set('Cache-Control', hasGuides ? 'private, no-store' : 'public, max-age=60, s-maxage=300');
+Astro.response.headers.set('Vary', 'Cookie');
+---
+<BaseLayout title="Map" description="Explore Albanian destinations and photo spots on an interactive map.">
+  <div class="mapx" data-map-explorer data-has-guides={hasGuides ? 'true' : 'false'} data-view="list">
+    <div class="container mapx__top">
+      <h1 class="mapx__h1">Explore the map</h1>
+      <FilterBar id="map-filters" searchLabel="Search places" noun={['place', 'places']} groups={groups} state={state} total={visible.length} items={[]} manual />
+      <div class="mapx__views" role="group" aria-label="View">
+        <button type="button" data-view="list" aria-pressed="true"><Icon name="list" size={18} /> List</button>
+        <button type="button" data-view="map" aria-pressed="false"><Icon name="map" size={18} /> Map</button>
+      </div>
+    </div>
+
+    <div class="mapx__body">
+      <section class="mapx__list" aria-label="Places">
+        <button type="button" class="mapx__area-clear slink" data-area-clear hidden>Showing this map area only — show all places</button>
+        <ol class="mlist" data-map-list></ol>
+        <div class="notice" data-map-empty hidden>
+          <p><strong>No places match.</strong> Try another word, clear filters or search a different area.</p>
+        </div>
+        <section class="mapx__unplaced" data-map-unplaced hidden aria-labelledby="unplaced-h">
+          <h2 id="unplaced-h" class="mapx__h2">Not on the map yet</h2>
+          <p class="muted">These places don’t have a verified public location yet, so they have no pin.</p>
+          <ul class="mlist" data-map-unplaced-list></ul>
+        </section>
+        <section class="mapx__unplaced" data-map-premium hidden aria-labelledby="premium-h">
+          <h2 id="premium-h" class="mapx__h2">From your guides</h2>
+          <p class="muted">Exact locations included in guides you bought. Visible only to you.</p>
+          <ul class="mlist" data-map-premium-list></ul>
+        </section>
+      </section>
+
+      <section class="mapx__map" aria-label="Map" aria-describedby="map-help">
+        <p id="map-help" class="visually-hidden">Interactive map. Use the list to browse places with the keyboard; selecting a place there highlights it on the map.</p>
+        <div class="mapx__canvas" data-map-canvas></div>
+        <p class="mapx__status" data-map-status role="status">The map loads when you open it.</p>
+        <button type="button" class="mapx__area btn btn--sm" data-area hidden><Icon name="search" size={16} /> Search this area</button>
+        <article class="mcard" data-map-card hidden tabindex="-1" aria-live="polite"></article>
+      </section>
+    </div>
+    <p class="visually-hidden" data-map-announce aria-live="polite"></p>
+    <script type="application/json" data-map-config set:html={JSON.stringify(config)} />
+  </div>
+</BaseLayout>
+
+<script>
+  import { initMapExplorer } from '../features/map/explorer';
+  document.querySelectorAll<HTMLElement>('[data-map-explorer]').forEach(initMapExplorer);
+</script>
+
+<style is:global>
+  .mapx__top {
+    padding-top: 20px;
+  }
+  .mapx__h1 {
+    font-size: var(--step-3);
+    margin-bottom: 12px;
+  }
+  .mapx .fbar {
+    margin-bottom: 10px;
+  }
+  .mapx__views {
+    display: none;
+  }
+  .mapx__body {
+    display: grid;
+    grid-template-columns: minmax(300px, 400px) minmax(0, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--sand);
+    height: calc(100dvh - var(--header-h) - 24px);
+    min-height: 480px;
+  }
+  .mapx__list {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px var(--gutter) 24px;
+    background: var(--cream);
+  }
+  .mapx__map {
+    position: relative;
+    background: #e8e4dc;
+  }
+  /* MapLibre sets .maplibregl-map { position: relative }; keep the canvas filling its box. */
+  .mapx__canvas,
+  .mapx__canvas.maplibregl-map {
+    position: absolute;
+    inset: 0;
+  }
+  .mapx__status {
+    position: absolute;
+    inset: 16px 16px auto 16px;
+    margin: 0;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: rgb(255 253 248 / 0.95);
+    box-shadow: var(--shadow-sm);
+    z-index: 2;
+  }
+  .mapx__status[hidden] {
+    display: none;
+  }
+  .mapx__area {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    box-shadow: var(--shadow);
+  }
+  .mapx__area[hidden],
+  .mapx__area-clear[hidden],
+  .mapx__unplaced[hidden],
+  [data-map-empty][hidden] {
+    display: none;
+  }
+  .mapx__area-clear {
+    display: block;
+    margin-bottom: 8px;
+    text-align: left;
+  }
+  .mapx__h2 {
+    font-size: var(--step-1);
+    margin: 24px 0 4px;
+  }
+  .mlist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+  .mitem {
+    background: var(--paper);
+    border: 1px solid var(--sand);
+    border-radius: 14px;
+    padding: 6px;
+  }
+  .mitem__main {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+    padding: 6px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .mitem__main:hover {
+    background: var(--cream);
+  }
+  .mitem__main[aria-current='true'] {
+    background: var(--burgundy-tint);
+    box-shadow: inset 0 0 0 2px var(--burgundy);
+  }
+  .mitem__text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .mitem__title {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    color: var(--burgundy-dark);
+  }
+  .mitem__meta {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .mitem__chip {
+    justify-self: start;
+    font-size: 0.72rem;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #fff3cd;
+    color: #5b4300;
+  }
+  .mitem__actions {
+    display: flex;
+    gap: 6px;
+    padding: 4px 6px 2px 74px;
+    flex-wrap: wrap;
+  }
+  .mbtn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--sand-line);
+    background: var(--white);
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .mbtn--save[aria-pressed='true'] {
+    background: var(--burgundy);
+    border-color: var(--burgundy);
+    color: #fff;
+  }
+  .sthumb--premium {
+    background: radial-gradient(circle, #c98a16 0 30%, #fff3cd 32%);
+  }
+
+  /* Desktop: top-left of the map so the actions are always on screen. */
+  .mcard {
+    position: absolute;
+    left: 16px;
+    top: 16px;
+    z-index: 4;
+    width: min(380px, calc(100% - 32px));
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+    border-radius: 18px;
+    background: var(--paper);
+    box-shadow: var(--shadow-lift);
+  }
+  .mcard[hidden] {
+    display: none;
+  }
+  .mcard > .sthumb {
+    width: 96px;
+    height: 96px;
+    border-radius: 12px;
+  }
+  .mcard__body {
+    min-width: 0;
+  }
+  .mcard__title {
+    font-size: 1.3rem;
+    margin: 0 28px 2px 0;
+  }
+  .mcard__meta {
+    margin: 0 0 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .mcard__summary {
+    margin: 0 0 8px;
+    font-size: 0.9rem;
+  }
+  .mcard__note {
+    margin: 0 0 8px;
+    font-size: 0.8rem;
+    color: #5b4300;
+  }
+  .mcard__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .mcard__close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--cream-deep);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .mcard:not(:has(> .sthumb)) {
+    grid-template-columns: 1fr;
+  }
+
+  /* Phones and small tablets: List / Map switch; selected card as a sheet above the bottom nav. */
+  @media (max-width: 899.98px) {
+    .mapx__views {
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 999px;
+      background: var(--cream-deep);
+      margin-bottom: 10px;
+    }
+    .mapx__views button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 44px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--ink);
+    }
+    .mapx__views button[aria-pressed='true'] {
+      background: var(--burgundy);
+      color: #fff;
+    }
+    .mapx__body {
+      display: block;
+      height: auto;
+      min-height: 0;
+    }
+    .mapx[data-view='list'] .mapx__map,
+    .mapx[data-view='map'] .mapx__list {
+      display: none;
+    }
+    .mapx__list {
+      overflow: visible;
+    }
+    .mapx__map {
+      height: calc(100dvh - var(--header-h) - var(--bottom-nav-h) - 150px);
+      min-height: 360px;
+    }
+    .mcard {
+      top: auto;
+      left: 8px;
+      right: 8px;
+      bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+      width: auto;
+      grid-template-columns: 72px minmax(0, 1fr);
+    }
+    .mcard > .sthumb {
+      width: 72px;
+      height: 72px;
+    }
+  }
+</style>

@@ -4,31 +4,32 @@ import PageHeader from '../components/content/PageHeader.astro';
 import Icon from '../components/Icon.astro';
 import { loadContent, formatUpdated } from '../features/content/queries';
 import { formatEventDate, upcomingEvents } from '../features/content/events';
+import FilterBar from '../components/filters/FilterBar.astro';
+import { eventListing } from '../features/filters/listings';
+import { applyFilters, readState } from '../features/filters/core';
 
 // Filtered at request time so past events disappear without waiting for a rebuild.
 export const prerender = false;
 
 const content = await loadContent();
-const destination = content.destinations.find((d) => d.slug === Astro.url.searchParams.get('destination'));
-const events = upcomingEvents(content.events).filter((e) => !destination || e.destinationSlug === destination.slug);
+const upcoming = upcomingEvents(content.events);
+const { items, groups, sorts, defaultSort } = eventListing(content, upcoming);
+const state = readState(Astro.url.searchParams, groups, sorts, defaultSort);
+const shown = new Set(applyFilters(items, state).map((i) => i.id));
+const events = upcoming;
 const destName = (slug?: string) => content.destinations.find((d) => d.slug === slug)?.title;
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=600');
 ---
 <BaseLayout title="Events" description="Upcoming events in Albania with organiser links and last-checked dates.">
   <PageHeader title="What’s on" note="Festivals, markets & local life" intro="Upcoming events with organiser links. Dates are in Albanian time (Europe/Tirane); always confirm with the organiser before you go." />
   <div class="container section" style="padding-top: 8px">
-    {content.destinations.length > 0 && (
-      <nav aria-label="Filter by destination">
-        <ul class="filter-pills">
-          <li><a href="/events" aria-current={!destination ? 'true' : undefined}>Everywhere</a></li>
-          {content.destinations.map((d) => <li><a href={`/events?destination=${d.slug}`} aria-current={destination?.slug === d.slug ? 'true' : undefined}>{d.title}</a></li>)}
-        </ul>
-      </nav>
+    {upcoming.length > 1 && (
+      <FilterBar id="event-filters" searchLabel="Search events" noun={['event', 'events']} groups={groups} sorts={sorts} defaultSort={defaultSort} state={state} total={shown.size} items={items} listId="event-list" />
     )}
     {events.length > 0 ? (
-      <ul class="ev-list" role="list">
+      <ul class="ev-list" id="event-list" role="list">
         {events.map((e) => (
-          <li class="card ev" id={e.slug}>
+          <li class="card ev" id={e.slug} data-id={e.slug} hidden={!shown.has(e.slug)}>
             <p class="ev__date"><Icon name="calendar" size={18} /> {formatEventDate(e)}</p>
             <h2 class="ev__title">{e.title}</h2>
             <p>{e.summary}</p>
@@ -44,14 +45,24 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=600');
       </ul>
     ) : (
       <div class="notice">
-        <p><strong>No upcoming events listed{destination ? ` for ${destination.title}` : ''}.</strong></p>
+        <p><strong>No upcoming events listed.</strong></p>
         <p>We only list events with a named organiser, a source link and a recent check date. Meanwhile, explore <a href="/destinations">destinations</a> or the <a href="/journal">journal</a>.</p>
+      </div>
+    )}
+    {upcoming.length > 0 && (
+      <div class="notice" data-fempty="event-list" hidden={shown.size > 0}>
+        <p><strong>No events match.</strong></p>
+        <p><button type="button" class="btn btn--sm btn--outline" data-fempty-clear>Clear filters</button></p>
       </div>
     )}
   </div>
 </BaseLayout>
 
 <style>
+  .ev-list > [hidden],
+  [data-fempty][hidden] {
+    display: none;
+  }
   .ev-list {
     list-style: none;
     padding: 0;

@@ -19,6 +19,7 @@ const FORBIDDEN_TEXT = [
   /APP_SECRET|DATABASE_URL|S3_SECRET_ACCESS_KEY|SMTP_URL/,
   /external_url|externalUrl/,
   /postgres(ql)?:\/\//i,
+  /premium_places|TEST premium point/, // premium map locations must never be public
 ];
 
 const problems: string[] = [];

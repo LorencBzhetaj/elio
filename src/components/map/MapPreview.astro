@@ -1,0 +1,106 @@
+---
+/**
+ * Homepage teaser for the map. Same data (/api/map/points) and runtime as /map, loaded only when the
+ * section approaches the viewport, so it never affects the hero. Gestures are cooperative (no scroll trap).
+ */
+import Icon from '../Icon.astro';
+import { mapConfig } from '../../features/map/config';
+import { ALBANIA_BOUNDS } from '../../features/map/data';
+
+const { styleUrl, font } = mapConfig();
+---
+<section class="section mprev" aria-labelledby="h-map">
+  <div class="container mprev__grid">
+    <div class="mprev__copy">
+      <p class="hand mprev__note" aria-hidden="true">Find it on the map</p>
+      <h2 id="h-map">Explore the map</h2>
+      <p class="muted">Destinations and photo spots across Albania in one view. Filter by category, open a place and save it to your trip.</p>
+      <a class="btn" href="/map">Explore the map <Icon name="arrow-right" size={18} /></a>
+    </div>
+    <div class="mprev__map" data-map-preview data-style={styleUrl} data-font={font} data-bounds={JSON.stringify(ALBANIA_BOUNDS)}>
+      <div class="mprev__canvas" data-canvas role="region" aria-label="Map preview of Albania"></div>
+      <p class="mprev__status" data-status role="status">Map preview loads as you scroll.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-map-preview]');
+  if (root) {
+    const status = root.querySelector<HTMLElement>('[data-status]')!;
+    const load = async () => {
+      status.textContent = 'Loading map…';
+      try {
+        const [{ createMapRuntime }, res] = await Promise.all([import('../../features/map/runtime'), fetch('/api/map/points')]);
+        if (!res.ok) throw new Error(`points ${res.status}`);
+        const { items } = (await res.json()) as { items: { id: string; kind: string; title: string; coords: [number, number] | null }[] };
+        const rt = await createMapRuntime({
+          container: root.querySelector('[data-canvas]')!,
+          styleUrl: root.dataset.style!,
+          font: root.dataset.font!,
+          bounds: JSON.parse(root.dataset.bounds!),
+          cooperative: true,
+          onSelect: (id) => window.location.assign(`/map?place=${encodeURIComponent(id)}`),
+        });
+        rt.setPoints(items.filter((i) => i.coords).map((i) => ({ id: i.id, kind: i.kind, title: i.title, coords: i.coords! })));
+        status.hidden = true;
+      } catch (err) {
+        console.warn('[map preview] unavailable', err);
+        status.textContent = 'The map preview isn’t available right now — open the full map page to browse the list.';
+      }
+    };
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          io.disconnect();
+          load();
+        }
+      },
+      { rootMargin: '300px' },
+    );
+    io.observe(root);
+  }
+</script>
+
+<style>
+  .mprev__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: clamp(20px, 4vw, 48px);
+    align-items: center;
+  }
+  @media (max-width: 767.98px) {
+    .mprev__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .mprev__note {
+    font-size: 1.4rem;
+    margin: 0;
+  }
+  .mprev__map {
+    position: relative;
+    height: clamp(300px, 40vw, 420px);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: #e8e4dc;
+    box-shadow: var(--shadow);
+  }
+  .mprev__canvas,
+  .mprev__canvas:global(.maplibregl-map) {
+    position: absolute;
+    inset: 0;
+  }
+  .mprev__status {
+    position: absolute;
+    inset: auto 12px 12px 12px;
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgb(255 253 248 / 0.95);
+    font-size: 0.9rem;
+  }
+  .mprev__status[hidden] {
+    display: none;
+  }
+</style>

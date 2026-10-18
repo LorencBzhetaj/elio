@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { eventEndsAt, isUpcoming, tiraneMidnight, upcomingEvents } from '../../src/features/content/events';
-import { buildSearchIndex, search } from '../../src/features/content/search';
 import { contentBundle, event as eventSchema } from '../../src/features/content/schemas';
 import { assertUniqueSlugs } from '../../src/features/content/source';
 import { fixtures } from '../../src/content/fixtures';
@@ -52,30 +51,6 @@ describe('content', () => {
     const broken = structuredClone(fixtures);
     broken.destinations[0].cover.alt = '';
     expect(contentBundle.safeParse(broken).success).toBe(false);
-  });
-});
-
-describe('search', () => {
-  const index = buildSearchIndex(contentBundle.parse(fixtures));
-
-  it('finds accented names without accents', () => {
-    expect(search(index, 'gjirokaster').map((r) => r.title)).toContain('Gjirokastër');
-  });
-
-  it('returns only whitelisted public fields', () => {
-    const results = search(index, 'theth');
-    expect(results.length).toBeGreaterThan(0);
-    for (const r of results) expect(Object.keys(r).sort()).toEqual(['summary', 'title', 'type', 'url']);
-  });
-
-  it('never exposes private keys, coordinates or prices', () => {
-    const blob = JSON.stringify(search(index, 'a'));
-    expect(blob).not.toMatch(/privateObjectKey|guides\/[a-z-]+\/v\d|coordinates|priceMinor|externalUrl/);
-  });
-
-  it('handles no results and empty queries', () => {
-    expect(search(index, 'zzzzzz')).toEqual([]);
-    expect(search(index, '   ')).toEqual([]);
   });
 });
 

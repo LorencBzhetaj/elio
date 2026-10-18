@@ -2,58 +2,57 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageHeader from '../../components/content/PageHeader.astro';
 import DestinationCard from '../../components/cards/DestinationCard.astro';
+import FilterBar from '../../components/filters/FilterBar.astro';
+import Icon from '../../components/Icon.astro';
 import { loadContent } from '../../features/content/queries';
-import { regions, destinationTypes } from '../../features/content/schemas';
+import { destinationListing, EXPERIENCES } from '../../features/filters/listings';
+import { applyFilters, readState } from '../../features/filters/core';
 
-// Rendered on request so query-string filters work without client JS.
+// Rendered on request so the URL (query, filters, sort) works on refresh and without JavaScript.
 export const prerender = false;
 
 const content = await loadContent();
-const region = Astro.url.searchParams.get('region');
-const type = Astro.url.searchParams.get('type');
-const validRegion = regions.find((r) => r === region);
-const validType = destinationTypes.find((t) => t === type);
+const { items, groups, sorts, defaultSort } = destinationListing(content);
 
-const results = content.destinations.filter(
-  (d) => (!validRegion || d.region === validRegion) && (!validType || d.types.includes(validType)),
-);
-
-const typeLabels: Record<string, string> = { mountains: 'Mountains', coast: 'Coast', 'historic-town': 'Historic towns', city: 'Cities', lake: 'Lakes', nature: 'Nature' };
-const regionLabels: Record<string, string> = { north: 'North', central: 'Central', south: 'South', coast: 'Coast' };
-const link = (params: Record<string, string | undefined>) => {
-  const sp = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) if (v) sp.set(k, v);
-  const q = sp.toString();
-  return `/destinations${q ? `?${q}` : ''}`;
-};
+// Backwards compatibility: earlier links used ?type=coast etc.
+const params = new URLSearchParams(Astro.url.search);
+for (const t of params.getAll('type')) {
+  const exp = EXPERIENCES.find((e) => (e.types as readonly string[]).includes(t));
+  if (exp) params.append('experience', exp.value);
+}
+const state = readState(params, groups, sorts, defaultSort);
+const visible = applyFilters(items, state);
+const shown = new Set(visible.map((v) => v.id));
+const bySlug = new Map(content.destinations.map((d) => [d.slug, d]));
+// Server order = current sort; hidden items follow so the client can reveal them without a reload.
+const ordered = [...visible.map((v) => v.id), ...items.map((i) => i.id).filter((id) => !shown.has(id))];
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
 ---
 <BaseLayout title="Destinations" description="Mountains, coast, historic towns and cities across Albania — free destination pages.">
   <PageHeader title="Find your Albania" note="Mountains · Riviera · Cities" intro="Mountains, coastline, historic towns and cities — practical, free destination pages." />
   <section class="container section" style="padding-top: 8px" aria-label="Destinations">
-    <nav aria-label="Filter by type">
-      <ul class="filter-pills">
-        <li><a href={link({ region: validRegion })} aria-current={!validType ? 'true' : undefined}>All types</a></li>
-        {destinationTypes.map((t) => <li><a href={link({ region: validRegion, type: t })} aria-current={validType === t ? 'true' : undefined}>{typeLabels[t]}</a></li>)}
-      </ul>
-    </nav>
-    <nav aria-label="Filter by region">
-      <ul class="filter-pills">
-        <li><a href={link({ type: validType })} aria-current={!validRegion ? 'true' : undefined}>All regions</a></li>
-        {regions.map((r) => <li><a href={link({ region: r, type: validType })} aria-current={validRegion === r ? 'true' : undefined}>{regionLabels[r]}</a></li>)}
-      </ul>
-    </nav>
-    <p class="muted" role="status">{results.length} {results.length === 1 ? 'destination' : 'destinations'}</p>
-    {results.length > 0 ? (
-      <ul class="grid dest-grid" role="list">
-        {results.map((d, i) => <li><DestinationCard destination={d} seed={i + 51} headingLevel="h2" /></li>)}
-      </ul>
-    ) : (
-      <div class="notice">
-        <p><strong>No destinations match these filters yet.</strong></p>
-        <p><a href="/destinations">Show all destinations</a> or <a href="/search">search the site</a>.</p>
-      </div>
-    )}
+    <FilterBar
+      id="dest-filters"
+      searchLabel="Search destinations"
+      noun={['destination', 'destinations']}
+      groups={groups}
+      sorts={sorts}
+      defaultSort={defaultSort}
+      state={state}
+      total={visible.length}
+      items={items}
+      listId="dest-list"
+    />
+    <p class="dest-maplink"><a href="/map"><Icon name="map" size={18} /> View destinations on the map</a></p>
+    <ul class="grid dest-grid" id="dest-list" role="list">
+      {ordered.map((slug, i) => (
+        <li data-id={slug} hidden={!shown.has(slug)}><DestinationCard destination={bySlug.get(slug)!} seed={i + 51} headingLevel="h2" /></li>
+      ))}
+    </ul>
+    <div class="notice" data-fempty="dest-list" hidden={visible.length > 0}>
+      <p><strong>No destinations match.</strong> Try another word or remove a filter.</p>
+      <p><button type="button" class="btn btn--sm btn--outline" data-fempty-clear>Clear filters</button></p>
+    </div>
   </section>
 </BaseLayout>
 
@@ -64,9 +63,25 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
     padding: 0;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
   }
+  .dest-grid > [hidden] {
+    display: none;
+  }
   @media (max-width: 539.98px) {
     .dest-grid {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+  }
+  .dest-maplink {
+    margin: 0;
+  }
+  .dest-maplink a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    font-weight: 600;
+  }
+  [data-fempty][hidden] {
+    display: none;
   }
 </style>

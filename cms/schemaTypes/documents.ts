@@ -1,5 +1,5 @@
 import { defineField, defineType } from 'sanity';
-import { bodyBlocks, editorialFields } from './shared';
+import { aliasesField, bodyBlocks, editorialFields, geoPointField } from './shared';
 
 const regions = ['north', 'central', 'south', 'coast'];
 const destinationTypes = ['mountains', 'coast', 'historic-town', 'city', 'lake', 'nature'];
@@ -26,6 +26,8 @@ export const destination = defineType({
     guideRef(),
     defineField({ name: 'relatedArticles', type: 'array', of: [{ type: 'reference', to: [{ type: 'article' }] }] }),
     defineField({ name: 'featured', title: 'Feature on homepage', type: 'boolean', initialValue: false }),
+    aliasesField,
+    geoPointField(),
   ],
   preview: { select: { title: 'title', subtitle: 'kicker', media: 'cover' } },
 });
@@ -76,6 +78,7 @@ export const place = defineType({
       { name: 'lat', type: 'number', validation: (r) => r.required().min(-90).max(90) },
       { name: 'lng', type: 'number', validation: (r) => r.required().min(-180).max(180) },
     ] }),
+    aliasesField,
     guideRef(),
   ],
 });
@@ -105,6 +108,7 @@ export const event = defineType({
     defineField({ name: 'organizerUrl', title: 'Organiser URL', type: 'url', validation: (r) => r.required() }),
     defineField({ name: 'sourceUrl', title: 'Source URL', type: 'url', validation: (r) => r.required() }),
     defineField({ name: 'lastCheckedAt', title: 'Last checked', type: 'date', validation: (r) => r.required() }),
+    geoPointField('location', 'Event location (optional)'),
   ],
 });
 
@@ -154,6 +158,14 @@ export const siteSettings = defineType({
       type: 'string',
       options: { list: [{ title: 'A — Editorial collage', value: 'collage' }, { title: 'B — Panorama', value: 'panorama' }], layout: 'radio' },
       description: 'Changes the public homepage. Both are always available on /preview for comparison.',
+    }),
+    defineField({
+      name: 'suggestedSearches',
+      title: 'Suggested searches (shown when the search box is empty)',
+      type: 'array',
+      of: [{ type: 'string' }],
+      description: 'Editorial picks, not statistics. Keep to 4–8 short terms.',
+      validation: (r) => r.max(8),
     }),
     defineField({ name: 'heroCollage', title: 'Hero A — collage', type: 'object', fields: [
       { name: 'heading', type: 'string', initialValue: 'Postcards from Albania', validation: (r) => r.required() },

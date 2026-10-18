@@ -3,17 +3,33 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageHeader from '../../components/content/PageHeader.astro';
 import SpotCard from '../../components/cards/SpotCard.astro';
 import GuidePromo from '../../components/content/GuidePromo.astro';
+import FilterBar from '../../components/filters/FilterBar.astro';
 import { loadContent } from '../../features/content/queries';
+import { placeListing } from '../../features/filters/listings';
+import { applyFilters, readState } from '../../features/filters/core';
+
+export const prerender = false;
 
 const content = await loadContent();
 const guide = content.guides.find((g) => g.productSlug === 'photo-spots-map');
+const { items, groups, sorts, defaultSort } = placeListing(content);
+const state = readState(Astro.url.searchParams, groups, sorts, defaultSort);
+const shown = new Set(applyFilters(items, state).map((i) => i.id));
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
 ---
 <BaseLayout title="Photo spots" description="Scenic views, beaches and viewpoints across Albania, with access and light notes.">
   <PageHeader title="The spots worth saving" note="Explore photo spots across Albania" intro="Scenic views, hidden beaches and viewpoints — with access, light and safety notes." />
   <div class="container section spots-layout" style="padding-top: 8px">
-    <ul class="grid spots-grid" role="list">
-      {content.places.map((p, i) => <li><SpotCard place={p} seed={i + 81} headingLevel="h2" /></li>)}
-    </ul>
+    <div>
+      <FilterBar id="spot-filters" searchLabel="Search photo spots" noun={['spot', 'spots']} groups={groups} sorts={sorts} defaultSort={defaultSort} state={state} total={shown.size} items={items} listId="spot-list" />
+      <ul class="grid spots-grid" id="spot-list" role="list">
+        {content.places.map((p, i) => <li data-id={p.slug} hidden={!shown.has(p.slug)}><SpotCard place={p} seed={i + 81} headingLevel="h2" /></li>)}
+      </ul>
+      <div class="notice" data-fempty="spot-list" hidden={shown.size > 0}>
+        <p><strong>No spots match.</strong></p>
+        <p><button type="button" class="btn btn--sm btn--outline" data-fempty-clear>Clear filters</button></p>
+      </div>
+    </div>
     {guide && <div class="spots-aside"><GuidePromo guide={guide} /></div>}
   </div>
 </BaseLayout>
@@ -29,6 +45,10 @@ const guide = content.guides.find((g) => g.productSlug === 'photo-spots-map');
     .spots-layout {
       grid-template-columns: minmax(0, 1fr);
     }
+  }
+  .spots-grid > [hidden],
+  [data-fempty][hidden] {
+    display: none;
   }
   .spots-grid {
     list-style: none;
