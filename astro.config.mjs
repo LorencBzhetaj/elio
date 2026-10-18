@@ -30,6 +30,8 @@ export default defineConfig({
       // The dev server would otherwise serve any project file by path. Private guides and the
       // embedded dev database must never be reachable that way.
       fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/storage/**', '**/.data/**'] },
+      // Local DB and dev emails change at runtime; they must not trigger reloads.
+      watch: { ignored: ['**/.data/**', '**/storage/**'] },
     },
   },
 });
