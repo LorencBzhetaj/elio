@@ -5,6 +5,7 @@ import { loadOrderForViewer, refreshPendingOrder } from '../../lib/order-access'
 import { getOrderDetail } from '../../features/commerce/orders';
 import { formatMoney } from '../../features/commerce/money';
 import { site } from '../../config/site';
+import { deliverQueuedEmailsInDev } from '../../lib/dev-mail';
 
 export const prerender = false;
 
@@ -13,6 +14,7 @@ let loaded = await loadOrderForViewer(ref, Astro.cookies);
 if (loaded && (await refreshPendingOrder(loaded.detail))) {
   const fresh = (await getOrderDetail(loaded.db, loaded.order.id))!;
   loaded = { ...loaded, detail: fresh, order: fresh.order };
+  await deliverQueuedEmailsInDev();
 }
 // Note: query parameters (e.g. ?cancelled=1) only change wording, never the order state.
 const cancelledReturn = Astro.url.searchParams.has('cancelled');

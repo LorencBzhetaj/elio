@@ -13,6 +13,7 @@ let dbPromise: Promise<Db> | undefined;
 
 export async function createDb(url: string): Promise<{ db: Db; kind: DbKind; close: () => Promise<void> }> {
   if (url.startsWith('pglite:')) {
+    if (process.env.VERCEL) throw new Error('No DATABASE_URL configured on Vercel (embedded PGlite is local-only).');
     const { PGlite } = await import('@electric-sql/pglite');
     const { drizzle } = await import('drizzle-orm/pglite');
     const target = url.slice('pglite:'.length);

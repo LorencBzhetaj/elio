@@ -1,9 +1,16 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import node from '@astrojs/node';
+import vercel from '@astrojs/vercel';
 import sitemap from '@astrojs/sitemap';
 
-const site = process.env.SITE_URL || 'http://localhost:4321';
+/** On Vercel (VERCEL=1 during builds) use the Vercel adapter; everywhere else the standalone Node server. */
+const onVercel = Boolean(process.env.VERCEL);
+const vercelUrl =
+  process.env.VERCEL_ENV === 'production' && process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? process.env.VERCEL_PROJECT_PRODUCTION_URL
+    : process.env.VERCEL_URL;
+const site = process.env.SITE_URL || (vercelUrl ? `https://${vercelUrl}` : 'http://localhost:4321');
 
 // Private, transactional and preview routes never go in the sitemap.
 const PRIVATE_PREFIXES = [
@@ -12,7 +19,7 @@ const PRIVATE_PREFIXES = [
 
 export default defineConfig({
   site,
-  adapter: node({ mode: 'standalone' }),
+  adapter: onVercel ? vercel() : node({ mode: 'standalone' }),
   // Public content pages are prerendered by default; commerce/private pages opt out with `prerender = false`.
   output: 'static',
   trailingSlash: 'never',

@@ -29,10 +29,15 @@ const schema = z
     DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().int().min(10).max(600).default(60),
     SANITY_WEBHOOK_SECRET: z.string().optional(),
     BUILD_HOOK_URL: z.url().optional(),
+    /** Bearer secret for /api/cron/run (Vercel Cron sends it automatically when CRON_SECRET is set). */
+    CRON_SECRET: z.string().min(16).optional(),
   })
   .superRefine((env, ctx) => {
     if (env.APP_ENV === 'production' && env.PAYMENT_PROVIDER === 'mock') {
       ctx.addIssue({ code: 'custom', path: ['PAYMENT_PROVIDER'], message: 'Mock payments are disabled in production.' });
+    }
+    if (env.APP_ENV === 'production' && env.EMAIL_TRANSPORT !== 'smtp') {
+      ctx.addIssue({ code: 'custom', path: ['EMAIL_TRANSPORT'], message: 'Production must send real email (EMAIL_TRANSPORT=smtp).' });
     }
     if (env.EMAIL_TRANSPORT === 'smtp' && !env.SMTP_URL) {
       ctx.addIssue({ code: 'custom', path: ['SMTP_URL'], message: 'SMTP_URL is required when EMAIL_TRANSPORT=smtp.' });
@@ -65,6 +70,11 @@ export function loadDotEnvOnce() {
 export function serverEnv(): ServerEnv {
   if (!cached) {
     loadDotEnvOnce();
+    // On Vercel without an explicit SITE_URL, use the deployment URL (links in emails, payment returns).
+    if (!process.env.SITE_URL && process.env.VERCEL) {
+      const host = process.env.VERCEL_ENV === 'production' && process.env.VERCEL_PROJECT_PRODUCTION_URL ? process.env.VERCEL_PROJECT_PRODUCTION_URL : process.env.VERCEL_URL;
+      if (host) process.env.SITE_URL = `https://${host}`;
+    }
     const parsed = schema.safeParse(process.env);
     if (!parsed.success) {
       const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');

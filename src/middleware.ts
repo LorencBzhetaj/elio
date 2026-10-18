@@ -8,6 +8,14 @@ const NOINDEX_PREFIXES = [...PRIVATE_PREFIXES, '/search'];
 const PUBLIC_API = ['/api/search', '/api/map/points'];
 const startsWithAny = (path: string, prefixes: string[]) => prefixes.some((p) => path === p || path.startsWith(p + '/'));
 
+/** Routes that need the commerce database. */
+const SHOP_PREFIXES = ['/checkout', '/order', '/access', '/my-guides', '/admin', '/mock-pay', '/api/orders', '/api/downloads', '/api/files', '/api/payments', '/api/access', '/api/map/premium', '/api/cron'];
+
+/** A Vercel deployment without DATABASE_URL is a design preview: shop routes show a clear notice. */
+function shopConnected(): boolean {
+  return !process.env.VERCEL || /^postgres(ql)?:\/\//.test(process.env.DATABASE_URL ?? '');
+}
+
 const digest = (s: string) => createHash('sha256').update(s).digest();
 const sameSecret = (a: string, b: string) => timingSafeEqual(digest(a), digest(b));
 
@@ -47,6 +55,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
+  if (!context.isPrerendered && startsWithAny(path, SHOP_PREFIXES) && !shopConnected()) {
+    if (path.startsWith('/api/')) return Response.json({ error: 'shop_not_connected' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    return context.rewrite('/shop-unavailable');
+  }
+
   const response = await next();
 
   // Prerendered pages get these headers from the host config (see docs/deployment.md).
@@ -60,7 +73,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (startsWithAny(path, PRIVATE_PREFIXES) && !PUBLIC_API.includes(path)) {
       h.set('Cache-Control', 'no-store, private');
     }
-    if (startsWithAny(path, NOINDEX_PREFIXES)) h.set('X-Robots-Tag', 'noindex, nofollow');
+    // Only production is indexable; staging/preview deployments are hidden from search engines.
+    loadDotEnvOnce();
+    if (startsWithAny(path, NOINDEX_PREFIXES) || process.env.APP_ENV !== 'production') h.set('X-Robots-Tag', 'noindex, nofollow');
     // Access links must never leak through the Referer header.
     if (path.startsWith('/access')) h.set('Referrer-Policy', 'no-referrer');
   }

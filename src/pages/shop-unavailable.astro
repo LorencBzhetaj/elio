@@ -1,0 +1,16 @@
+---
+/** Shown for shop/account routes on a deployment that has no database connected (design preview). */
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+export const prerender = false;
+Astro.response.status = 503;
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+<BaseLayout title="Shop not connected" noindex>
+  <div class="container narrow section">
+    <h1>Shop not connected in this preview</h1>
+    <p class="lead">This is a design preview. Checkout, guide access and the admin area need a database, which isn’t connected to this deployment yet.</p>
+    <p>Everything else — destinations, map, search, journal and the trip planner — works normally.</p>
+    <p><a class="btn" href="/">Back to the homepage</a></p>
+  </div>
+</BaseLayout>

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDb, getProvider, isLiveMode } from '../../../../features/services';
 import { handleCallback } from '../../../../features/payments/reconcile';
+import { deliverQueuedEmailsInDev } from '../../../../lib/dev-mail';
 
 export const prerender = false;
 
@@ -25,6 +26,7 @@ export const POST: APIRoute = async ({ params, request, url }) => {
 
   try {
     const result = await handleCallback(db, provider, { rawBody, headers: request.headers, query: url.searchParams }, isLiveMode());
+    await deliverQueuedEmailsInDev();
     return new Response(result.accepted ? 'ok' : 'rejected', { status: result.accepted ? 200 : 400 });
   } catch (err) {
     // Non-2xx lets the provider retry; reconciliation also covers lost callbacks.

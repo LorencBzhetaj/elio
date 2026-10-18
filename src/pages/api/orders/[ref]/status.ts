@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { loadOrderForViewer, refreshPendingOrder } from '../../../../lib/order-access';
 import { findOrderByReference } from '../../../../features/commerce/orders';
+import { deliverQueuedEmailsInDev } from '../../../../lib/dev-mail';
 
 export const prerender = false;
 
@@ -11,6 +12,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
   let status = loaded.order.status;
   if (status === 'pending' && (await refreshPendingOrder(loaded.detail))) {
     status = (await findOrderByReference(loaded.db, loaded.order.publicReference))!.status;
+    await deliverQueuedEmailsInDev();
   }
   return Response.json({ status }, { headers: { 'Cache-Control': 'no-store' } });
 };

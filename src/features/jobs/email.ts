@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import { maskEmail } from '../../lib/crypto';
 
 export interface EmailMessage {
@@ -14,19 +15,19 @@ export interface EmailTransport {
 }
 
 /**
- * Development transport: writes each email to .data/mail/*.html so links can be opened locally.
- * Logs only a masked recipient and subject — never the body or links.
+ * Non-production transport: no real email is sent. Each message is written to .data/mail/*.html
+ * (/tmp on Vercel, the only writable place) and the sign-in link is printed to the log so it can be used.
  */
-export function createConsoleTransport(dir = '.data/mail'): EmailTransport {
+export function createConsoleTransport(dir = process.env.VERCEL ? path.join(os.tmpdir(), 'mail') : '.data/mail'): EmailTransport {
   return {
     async send(m) {
       await fs.mkdir(dir, { recursive: true });
       const file = path.join(dir, `${new Date().toISOString().replace(/[:.]/g, '-')}-${Math.random().toString(36).slice(2, 7)}.html`);
       await fs.writeFile(file, `<!-- To: ${m.to} | Subject: ${m.subject} -->\n${m.html}`, 'utf8');
       console.info(`[email] to=${maskEmail(m.to)} subject="${m.subject}" saved=${file}`);
-      // Local development convenience only: print the link so it can be opened from the terminal.
-      // Never enabled outside APP_ENV=development, where real emails must not be logged.
-      if (process.env.APP_ENV === 'development') {
+      // Console transport = no real email (local dev or a staging preview): print the link so it can be
+      // used from the terminal / Vercel logs. Production must use SMTP (enforced by config validation).
+      if (process.env.APP_ENV !== 'production') {
         const link = /https?:\/\/\S+\/access\/redeem\?token=[\w-]+/.exec(m.text)?.[0];
         if (link) console.info(`[email] DEV sign-in link (single use, expires soon): ${link}`);
       }

@@ -5,9 +5,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const root = path.resolve('dist/client');
+// Node adapter → dist/client; Vercel adapter → .vercel/output/static
+const root = path.resolve(process.env.VERCEL ? '.vercel/output/static' : 'dist/client');
 if (!fs.existsSync(root)) {
-  console.error('dist/client not found — run astro build first.');
+  console.error(`${root} not found — run astro build first.`);
   process.exit(1);
 }
 

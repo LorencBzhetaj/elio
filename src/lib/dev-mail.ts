@@ -1,13 +1,18 @@
 import { serverEnv } from '../config/env';
 
 /**
- * Local development only: process queued emails immediately, so sign-in and access links work without
- * running `npm run worker` (with the embedded PGlite database only one process can open it).
- * Staging/production always use the worker.
+ * Processes queued emails right away when no background worker exists:
+ *  - local development with the console transport (PGlite allows only one process), and
+ *  - Vercel/serverless, where there is no long-running worker (retries run from /api/cron/run).
+ * On a server with `npm run worker`, the worker does this instead.
  */
-export async function deliverQueuedEmailsInDev(): Promise<void> {
+export function shouldFlushInline(): boolean {
   const env = serverEnv();
-  if (env.APP_ENV !== 'development' || env.EMAIL_TRANSPORT !== 'console') return;
+  return Boolean(process.env.VERCEL) || (env.APP_ENV === 'development' && env.EMAIL_TRANSPORT === 'console');
+}
+
+export async function deliverQueuedEmailsInDev(): Promise<void> {
+  if (!shouldFlushInline()) return;
   try {
     const [{ getDb }, { getJobHandlers }, { runOutboxOnce }] = await Promise.all([
       import('../db/client'),
@@ -16,6 +21,6 @@ export async function deliverQueuedEmailsInDev(): Promise<void> {
     ]);
     await runOutboxOnce(await getDb(), await getJobHandlers());
   } catch (err) {
-    console.warn('[dev-mail] could not deliver queued emails', (err as Error).message);
+    console.warn('[outbox-inline] could not deliver queued emails', (err as Error).message);
   }
 }

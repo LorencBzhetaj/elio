@@ -35,6 +35,8 @@ const {
 } = Astro.props;
 
 const fullTitle = title === brand ? title : `${title} · ${brand}`;
+// Staging/preview builds must never be indexed; only APP_ENV=production is.
+const hideFromSearch = noindex || process.env.APP_ENV !== 'production';
 const canonicalUrl = canonical ?? (Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined);
 ---
 <!doctype html>
@@ -44,7 +46,7 @@ const canonicalUrl = canonical ?? (Astro.site ? new URL(Astro.url.pathname, Astr
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
-    {noindex ? <meta name="robots" content="noindex, nofollow" /> : canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    {hideFromSearch ? <meta name="robots" content="noindex, nofollow" /> : canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
     <meta name="theme-color" content="#faf5eb" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={fullTitle} />

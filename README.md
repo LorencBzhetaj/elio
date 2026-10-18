@@ -47,6 +47,11 @@ npm run dev                 # http://localhost:4321
 With PostgreSQL instead of PGlite: `docker compose up -d db`, set
 `DATABASE_URL=postgres://albania:albania@localhost:5432/albania`, then `npm run db:migrate && npm run db:seed`.
 
+## Deploy a client preview on Vercel
+
+Import the repository in Vercel and set a few environment variables — step by step in
+[`docs/vercel.md`](docs/vercel.md). The client then opens `/preview?key=…` to compare both heroes.
+
 ## Scripts
 
 | Command | What it does |
