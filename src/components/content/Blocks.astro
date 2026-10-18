@@ -1,0 +1,36 @@
+---
+import type { Block } from '../../features/content/schemas';
+import Icon from '../Icon.astro';
+
+interface Props {
+  blocks: Block[];
+}
+const { blocks } = Astro.props;
+---
+{blocks.map((b) =>
+  b.type === 'h2' ? <h2>{b.text}</h2>
+  : b.type === 'h3' ? <h3>{b.text}</h3>
+  : b.type === 'p' ? <p>{b.text}</p>
+  : b.type === 'ul' ? <ul>{b.items.map((i) => <li>{i}</li>)}</ul>
+  : (
+    <p class="todo"><Icon name="info" size={18} /><span><strong>Content to come.</strong> {b.text}</span></p>
+  ),
+)}
+
+<style>
+  .todo {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #fffaf0;
+    border: 1px dashed #d9b766;
+    color: #5b4300;
+    font-size: 0.95rem;
+  }
+  .todo :global(.icon) {
+    flex: none;
+    margin-top: 3px;
+  }
+</style>

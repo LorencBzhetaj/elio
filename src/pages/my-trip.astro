@@ -1,0 +1,236 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/content/PageHeader.astro';
+import Icon from '../components/Icon.astro';
+import { loadContent } from '../features/content/queries';
+
+const content = await loadContent();
+const destinations = content.destinations.map((d) => ({ slug: d.slug, title: d.title, kicker: d.kicker }));
+---
+<BaseLayout title="My trip" noindex description="Your saved Albania trip, day by day. Stored on this device.">
+  <PageHeader title="My trip" note="Your Albania, your order." intro="Arrange saved destinations day by day. Use the arrow buttons to reorder or move a place to another day." />
+  <div class="container narrow section" style="padding-top: 8px">
+    <p class="notice notice--warn trip-storage">
+      <Icon name="info" size={18} /> Saved in this browser on this device only — not synced, and removed if you clear browser data.
+    </p>
+    <div id="trip-alert" role="status" aria-live="polite" class="trip-alert"></div>
+    <div id="trip-root" aria-live="off">
+      <noscript><p>The trip planner needs JavaScript enabled.</p></noscript>
+    </div>
+    <div class="trip-actions">
+      <button type="button" class="btn btn--outline btn--sm" id="add-day"><Icon name="plus" size={16} /> Add a day</button>
+      <a class="btn btn--sm" href="/plan"><Icon name="sparkle" size={16} /> Find destinations</a>
+      <button type="button" class="btn btn--ghost btn--sm" id="reset-trip"><Icon name="trash" size={16} /> Start over</button>
+    </div>
+  </div>
+  <script type="application/json" id="destinations-data" set:html={JSON.stringify(destinations)} />
+</BaseLayout>
+
+<script>
+  import { addDay, moveDestination, moveToDay, removeDay, removeDestination, emptyTrip, type SavedTrip } from '../features/trip/model';
+  import { clearTrip, loadTrip, saveTrip } from '../features/trip/storage';
+
+  type D = { slug: string; title: string; kicker: string };
+  const known = new Map<string, D>((JSON.parse(document.getElementById('destinations-data')!.textContent || '[]') as D[]).map((d) => [d.slug, d]));
+  const root = document.getElementById('trip-root')!;
+  const alertBox = document.getElementById('trip-alert')!;
+
+  let { trip, status } = loadTrip();
+  if (status === 'recovered') alertBox.textContent = 'Your saved trip could not be read, so we started a fresh one.';
+  if (status === 'unavailable') alertBox.textContent = 'Your browser is blocking storage, so changes here cannot be saved.';
+
+  function commit(next: SavedTrip, message: string, focusId?: string) {
+    trip = next;
+    if (!saveTrip(trip) && status !== 'unavailable') alertBox.textContent = 'Could not save — browser storage is full or blocked.';
+    else alertBox.textContent = message;
+    render(focusId);
+  }
+
+  const el = (tag: string, props: Record<string, unknown> = {}, ...children: (Node | string)[]): HTMLElement => {
+    const node = Object.assign(document.createElement(tag), props);
+    node.append(...children);
+    return node;
+  };
+  const iconBtn = (label: string, text: string, onClick: () => void, disabled = false, id?: string) => {
+    const b = el('button', { type: 'button', className: 'trip-btn', disabled, title: label }, text) as HTMLButtonElement;
+    b.setAttribute('aria-label', label);
+    if (id) b.id = id;
+    b.addEventListener('click', onClick);
+    return b;
+  };
+
+  function render(focusId?: string) {
+    root.replaceChildren();
+    const total = trip.days.reduce((n, d) => n + d.destinationIds.length, 0);
+    if (total === 0) {
+      root.append(
+        el('div', { className: 'card trip-empty' },
+          el('h2', {}, 'Your trip is empty'),
+          el('p', { className: 'muted' }, 'Add destinations from any destination page, or find ideas with the planner.'),
+          Object.assign(el('a', { className: 'btn', href: '/destinations' }, 'Browse destinations')),
+        ),
+      );
+    }
+    const ol = el('ol', { className: 'trip-days' });
+    trip.days.forEach((day, di) => {
+      const items = el('ol', { className: 'trip-items' });
+      day.destinationIds.forEach((id, ii) => {
+        const d = known.get(id);
+        const name = d?.title ?? id;
+        const first = di === 0 && ii === 0;
+        const last = di === trip.days.length - 1 && ii === day.destinationIds.length - 1;
+        const moveSel = el('select', { className: 'input trip-move' }) as HTMLSelectElement;
+        moveSel.setAttribute('aria-label', `Move ${name} to day`);
+        trip.days.forEach((_, i) => moveSel.add(new Option(`Day ${i + 1}`, String(i), i === di, i === di)));
+        moveSel.addEventListener('change', () => commit(moveToDay(trip, id, Number(moveSel.value)), `${name} moved to day ${Number(moveSel.value) + 1}.`, `up-${id}`));
+        items.append(
+          el('li', { className: 'card trip-item' + (d ? '' : ' trip-item--missing') },
+            el('div', { className: 'trip-item__text' },
+              d ? el('a', { href: `/destinations/${id}`, className: 'trip-item__title' }, name) : el('span', { className: 'trip-item__title' }, name),
+              el('span', { className: 'muted' }, d ? d.kicker : 'No longer available — remove it from your trip'),
+            ),
+            el('div', { className: 'trip-item__controls' },
+              iconBtn(`Move ${name} up`, '↑', () => commit(moveDestination(trip, id, -1), `${name} moved up.`, `up-${id}`), first, `up-${id}`),
+              iconBtn(`Move ${name} down`, '↓', () => commit(moveDestination(trip, id, 1), `${name} moved down.`, `down-${id}`), last, `down-${id}`),
+              moveSel,
+              iconBtn(`Remove ${name}`, '✕', () => commit(removeDestination(trip, id), `${name} removed.`, 'add-day')),
+            ),
+          ),
+        );
+      });
+      const head = el('div', { className: 'trip-day__head' },
+        el('h2', { className: 'trip-day__title' }, `Day ${di + 1}`, day.date ? el('span', { className: 'muted trip-day__date' }, ` · ${new Date(day.date + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}`) : ''),
+      );
+      if (trip.days.length > 1) head.append(iconBtn(`Remove day ${di + 1} (places move to the previous day)`, 'Remove day', () => commit(removeDay(trip, di), `Day ${di + 1} removed.`, 'add-day')));
+      ol.append(el('li', { className: 'trip-day' }, head, day.destinationIds.length ? items : el('p', { className: 'muted trip-day__empty' }, 'Nothing planned yet.')));
+    });
+    root.append(ol);
+    if (focusId) {
+      // Keep keyboard focus on the moved item; if its arrow is now disabled, use the other arrow.
+      const target = document.getElementById(focusId) as HTMLButtonElement | null;
+      const sibling = document.getElementById(focusId.startsWith('up-') ? focusId.replace('up-', 'down-') : focusId.replace('down-', 'up-')) as HTMLButtonElement | null;
+      (target && !target.disabled ? target : sibling && !sibling.disabled ? sibling : document.getElementById('add-day'))?.focus();
+    }
+  }
+
+  document.getElementById('add-day')!.addEventListener('click', () => commit(addDay(trip), `Day ${trip.days.length + 1} added.`));
+  document.getElementById('reset-trip')!.addEventListener('click', () => {
+    if (!confirm('Remove all days and saved destinations from this device?')) return;
+    clearTrip();
+    commit(emptyTrip(), 'Trip cleared.');
+  });
+  render();
+</script>
+
+<style>
+  .trip-storage {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 0.92rem;
+  }
+  .trip-alert {
+    min-height: 1.5em;
+    margin: 10px 0;
+    font-weight: 600;
+    color: var(--burgundy);
+  }
+  #trip-root :global(.trip-days) {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 22px;
+  }
+  #trip-root :global(.trip-day__head) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--sand);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+  }
+  #trip-root :global(.trip-day__title) {
+    font-size: var(--step-2);
+    margin: 0;
+  }
+  #trip-root :global(.trip-day__date) {
+    font-family: var(--font-ui);
+    font-size: 1rem;
+  }
+  #trip-root :global(.trip-items) {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 18px;
+    border-left: 2px dashed var(--sand-line);
+    display: grid;
+    gap: 10px;
+  }
+  #trip-root :global(.trip-item) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    position: relative;
+  }
+  #trip-root :global(.trip-item::before) {
+    content: '';
+    position: absolute;
+    left: -27px;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    margin-top: -7px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: 3px solid var(--cream);
+  }
+  #trip-root :global(.trip-item--missing) {
+    opacity: 0.75;
+    border-style: dashed;
+  }
+  #trip-root :global(.trip-item__text) {
+    display: grid;
+  }
+  #trip-root :global(.trip-item__title) {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    color: var(--burgundy-dark);
+    text-decoration: none;
+  }
+  #trip-root :global(.trip-item__controls) {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  #trip-root :global(.trip-btn) {
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 999px;
+    border: 1px solid var(--sand-line);
+    background: var(--white);
+    cursor: pointer;
+    padding: 0 12px;
+  }
+  #trip-root :global(.trip-btn:disabled) {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  #trip-root :global(.trip-move) {
+    width: auto;
+    min-height: 44px;
+  }
+  #trip-root :global(.trip-empty) {
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .trip-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 24px;
+  }
+</style>

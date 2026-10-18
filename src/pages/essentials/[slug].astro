@@ -1,0 +1,25 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHeader from '../../components/content/PageHeader.astro';
+import Blocks from '../../components/content/Blocks.astro';
+import VerifyNote from '../../components/content/VerifyNote.astro';
+import { loadContent } from '../../features/content/queries';
+import type { Essential } from '../../features/content/schemas';
+
+export async function getStaticPaths() {
+  const c = await loadContent();
+  return c.essentials.map((e) => ({ params: { slug: e.slug }, props: { e } }));
+}
+interface Props {
+  e: Essential;
+}
+const { e } = Astro.props;
+---
+<BaseLayout title={e.title} description={e.seoDescription ?? e.summary} canonical={e.canonical}>
+  <PageHeader title={e.title} intro={e.summary} crumbs={[{ href: '/essentials', label: 'Essentials' }]}>
+    <VerifyNote verified={e.verified} updatedAt={e.updatedAt} />
+  </PageHeader>
+  <article class="container section prose" style="padding-top: 8px">
+    <Blocks blocks={e.body} />
+  </article>
+</BaseLayout>

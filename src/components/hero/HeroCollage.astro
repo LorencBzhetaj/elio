@@ -1,0 +1,146 @@
+---
+/**
+ * Hero A — the previously approved editorial collage ("Postcards from Albania").
+ * White canvas, overlapping postcard tiles, centred headline, soft yellow/blue actions.
+ * Desktop uses six tiles; mobile uses four deliberate crops (not a shrunken desktop).
+ */
+import Photo from '../media/Photo.astro';
+import Icon from '../Icon.astro';
+import type { HeroProps } from './types';
+
+type Props = Omit<HeroProps, 'variant'>;
+const { heading, description, media, primaryAction, secondaryAction } = Astro.props;
+const tiles = media.slice(0, 6);
+---
+<section class="hero-collage" aria-labelledby="hero-heading">
+  <div class="container hero-collage__inner">
+    <div class="hero-collage__stage">
+      {tiles.map((image, i) => (
+        <figure class:list={['tile', `tile--${i + 1}`]}>
+          <Photo image={image} seed={i + 3} priority={i === 1} sizes="(max-width: 767px) 50vw, 25vw" hideLabel={i !== 1} />
+        </figure>
+      ))}
+      <p class="hand hero-collage__note hero-collage__note--left" aria-hidden="true">Mountains<br />Riviera<br />Cities<br />Real places</p>
+      <p class="hand hero-collage__note hero-collage__note--right" aria-hidden="true">Albania.<br />Different.<br />Closer.</p>
+      <svg class="hero-collage__squiggle" viewBox="0 0 400 120" aria-hidden="true" focusable="false">
+        <path d="M5 90 C80 20 140 120 210 60 S330 10 395 50" fill="none" stroke="currentColor" stroke-width="1.5" />
+      </svg>
+    </div>
+
+    <div class="hero-collage__copy">
+      <h1 id="hero-heading">{heading}</h1>
+      <p class="hero-collage__desc">{description}</p>
+      <div class="hero-collage__actions">
+        <a class="btn btn--sun" href={primaryAction.href}>{primaryAction.label} <Icon name="arrow-right" size={18} /></a>
+        <a class="btn btn--sky" href={secondaryAction.href}>{secondaryAction.label} <Icon name="arrow-right" size={18} /></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero-collage {
+    background: var(--paper);
+    padding-block: clamp(16px, 3vw, 36px) clamp(36px, 5vw, 64px);
+    overflow: hidden;
+  }
+  .hero-collage__stage {
+    position: relative;
+    height: clamp(360px, 36vw, 470px);
+    max-width: 1100px;
+    margin-inline: auto;
+  }
+  .tile {
+    position: absolute;
+    margin: 0;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--white);
+    padding: 6px;
+    box-shadow: var(--shadow-lift);
+  }
+  .tile :global(.photo) {
+    border-radius: 13px;
+  }
+  /* Desktop composition (percentages of the stage) */
+  .tile--1 { left: 15%; top: 2%;  width: 17%; height: 44%; transform: rotate(-3deg); }
+  .tile--2 { left: 36%; top: 10%; width: 22%; height: 86%; transform: rotate(0.5deg); z-index: 2; }
+  .tile--3 { left: 61%; top: 0%;  width: 21%; height: 46%; transform: rotate(2.5deg); }
+  .tile--4 { left: 11%; top: 50%; width: 17%; height: 40%; transform: rotate(-2deg); }
+  .tile--5 { left: 62%; top: 52%; width: 13%; height: 40%; transform: rotate(-1deg); }
+  .tile--6 { left: 77.5%; top: 59%; width: 11.5%; height: 33%; transform: rotate(3deg); }
+
+  .hero-collage__note {
+    position: absolute;
+    font-size: 1.35rem;
+    color: var(--muted);
+    margin: 0;
+    transform: rotate(-12deg);
+  }
+  .hero-collage__note--left { left: 0; top: 56%; }
+  .hero-collage__note--right { right: 0; top: 10%; transform: rotate(-10deg); }
+  .hero-collage__squiggle {
+    position: absolute;
+    left: -6%;
+    top: 34%;
+    width: 28%;
+    color: var(--sand-line);
+    z-index: -1;
+  }
+
+  .hero-collage__copy {
+    text-align: center;
+    margin-top: clamp(20px, 3vw, 36px);
+  }
+  .hero-collage__copy h1 {
+    color: var(--ink);
+    margin-bottom: 0.2em;
+  }
+  .hero-collage__desc {
+    color: var(--muted);
+    font-size: var(--step-1);
+    max-width: 52ch;
+    margin: 0 auto 24px;
+  }
+  .hero-collage__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  /* Tablet: drop the far-right tile, widen the rest */
+  @media (max-width: 1023.98px) {
+    .tile--6, .hero-collage__note--left { display: none; }
+    .tile--1 { left: 4%; width: 24%; }
+    .tile--4 { left: 2%; width: 26%; }
+    .tile--2 { left: 32%; width: 30%; }
+    .tile--3 { left: 66%; width: 30%; }
+    .tile--5 { left: 68%; width: 22%; }
+    .hero-collage__note--right { display: none; }
+  }
+
+  /* Mobile: four deliberate crops in an offset arrangement */
+  @media (max-width: 767.98px) {
+    .hero-collage__stage {
+      height: auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      grid-template-rows: 150px 150px 70px;
+      gap: 10px;
+    }
+    .tile {
+      position: relative;
+      inset: auto;
+      width: auto;
+      height: auto;
+      padding: 4px;
+    }
+    .tile--2 { grid-column: 1; grid-row: 1 / span 2; transform: rotate(-1.5deg); }
+    .tile--3 { grid-column: 2; grid-row: 1; transform: rotate(2deg); }
+    .tile--4 { grid-column: 2; grid-row: 2 / span 2; transform: rotate(-1deg); }
+    .tile--5 { grid-column: 1; grid-row: 3; transform: rotate(1deg); }
+    .tile--1, .tile--6, .hero-collage__note, .hero-collage__squiggle { display: none; }
+    .hero-collage__actions .btn { flex: 1 1 140px; }
+  }
+</style>

@@ -1,0 +1,32 @@
+---
+/** Decorative postmark. Purely ornamental (aria-hidden); never carries information. */
+interface Props {
+  class?: string;
+  label?: string;
+}
+const { class: className, label = 'ALBANIA' } = Astro.props;
+const id = `stamp-${Math.random().toString(36).slice(2, 8)}`;
+---
+<svg class:list={['stamp', className]} viewBox="0 0 220 120" aria-hidden="true" focusable="false">
+  <defs>
+    <path id={id} d="M60 60 m-40 0 a40 40 0 1 1 80 0 a40 40 0 1 1 -80 0" />
+  </defs>
+  <g fill="none" stroke="currentColor" stroke-width="1.6" opacity="0.75">
+    <circle cx="60" cy="60" r="50" />
+    <circle cx="60" cy="60" r="31" />
+    <path d="M38 70 L52 50 L58 57 L66 44 L82 70" stroke-linejoin="round" />
+    <path d="M118 38 q12 -8 24 0 t24 0 t24 0 t24 0 M118 54 q12 -8 24 0 t24 0 t24 0 t24 0 M118 70 q12 -8 24 0 t24 0 t24 0 t24 0 M118 86 q12 -8 24 0 t24 0 t24 0 t24 0" />
+  </g>
+  <text fill="currentColor" font-size="13" letter-spacing="4" font-family="var(--font-ui)" opacity="0.8">
+    <textPath href={`#${id}`} startOffset="2%">{label} · {label} ·</textPath>
+  </text>
+</svg>
+
+<style>
+  .stamp {
+    color: var(--burgundy);
+    width: 200px;
+    height: auto;
+    pointer-events: none;
+  }
+</style>

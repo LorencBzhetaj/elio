@@ -1,0 +1,62 @@
+---
+import { desc, eq, ilike, inArray, or, and, type SQL } from 'drizzle-orm';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../features/services';
+import { orders, outboxJobs, paymentAttempts } from '../../../db/schema';
+import { formatMoney } from '../../../features/commerce/money';
+import { requireAdmin } from '../../../lib/admin';
+
+export const prerender = false;
+
+const admin = await requireAdmin(Astro.cookies);
+if (!admin) return Astro.redirect('/admin/login', 303);
+
+const db = await getDb();
+const q = (Astro.url.searchParams.get('q') ?? '').trim().slice(0, 100);
+const status = Astro.url.searchParams.get('status');
+const statuses = ['pending', 'paid', 'failed', 'cancelled', 'expired', 'refunded'] as const;
+const conds: SQL[] = [];
+if (q) conds.push(or(ilike(orders.buyerEmail, `%${q.replace(/[%_]/g, '')}%`), eq(orders.publicReference, q.toUpperCase()))!);
+const st = statuses.find((s) => s === status);
+if (st) conds.push(eq(orders.status, st));
+
+const rows = await db.select().from(orders).where(conds.length ? and(...conds) : undefined).orderBy(desc(orders.createdAt)).limit(100);
+const review = await db.select().from(paymentAttempts).where(eq(paymentAttempts.status, 'needs_review')).limit(50);
+const failedJobs = await db.select().from(outboxJobs).where(inArray(outboxJobs.status, ['failed'])).orderBy(desc(outboxJobs.updatedAt)).limit(20);
+---
+<AdminLayout title="Orders" email={admin.email}>
+  <h1>Orders</h1>
+  {(review.length > 0 || failedJobs.length > 0) && (
+    <div class="notice notice--warn" style="margin-bottom: 18px">
+      {review.length > 0 && <p><strong>{review.length} payment attempt(s) need review</strong> (amount/currency mismatch, ambiguous provider result or double payment). Open the order to reconcile.</p>}
+      {failedJobs.length > 0 && <p><strong>{failedJobs.length} email job(s) failed</strong> after all retries. Use “Resend access email” on the order.</p>}
+    </div>
+  )}
+  <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+    <label class="visually-hidden" for="q">Search by email or reference</label>
+    <input class="input" style="max-width:340px" id="q" name="q" value={q} placeholder="Email or reference (AL-…)" />
+    <label class="visually-hidden" for="status">Status</label>
+    <select class="input" style="max-width:180px" id="status" name="status">
+      <option value="">All statuses</option>
+      {statuses.map((s) => <option value={s} selected={s === st}>{s}</option>)}
+    </select>
+    <button class="btn btn--sm" type="submit">Filter</button>
+  </form>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Reference</th><th>Buyer</th><th>Total</th><th>Status</th><th>Created</th></tr></thead>
+      <tbody>
+        {rows.map((o) => (
+          <tr>
+            <td><a href={`/admin/orders/${o.id}`}>{o.publicReference}</a></td>
+            <td>{o.buyerEmail}</td>
+            <td>{formatMoney(o.totalMinor, o.currency)}</td>
+            <td><span class={`status status--${o.status}`}>{o.status}</span></td>
+            <td>{o.createdAt.toISOString().slice(0, 16).replace('T', ' ')} UTC</td>
+          </tr>
+        ))}
+        {rows.length === 0 && <tr><td colspan="5">No orders found.</td></tr>}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>

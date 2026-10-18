@@ -1,0 +1,95 @@
+---
+import Photo from '../media/Photo.astro';
+import Icon from '../Icon.astro';
+import type { Article } from '../../features/content/schemas';
+
+interface Props {
+  article: Article;
+  seed?: number;
+  headingLevel?: 'h2' | 'h3';
+}
+const { article: a, seed = 1, headingLevel: H = 'h3' } = Astro.props;
+---
+<article class="acard card">
+  <div class="acard__media"><Photo image={a.cover} seed={seed} sizes="(max-width: 767px) 40vw, 260px" hideLabel /></div>
+  <div class="acard__body">
+    <p class="acard__meta">
+      <span>{a.category}</span>{a.readingMinutes && <span> · {a.readingMinutes} min read</span>}
+    </p>
+    <H class="acard__title"><a href={`/journal/${a.slug}`}>{a.title}</a></H>
+    <p class="acard__sum">{a.summary}</p>
+  </div>
+  <span class="acard__go" aria-hidden="true"><Icon name="arrow-right" size={18} /></span>
+</article>
+
+<style>
+  .acard {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(110px, 38%) 1fr auto;
+    align-items: center;
+    gap: 16px;
+    overflow: hidden;
+    padding-right: 14px;
+  }
+  .acard:has(a:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .acard__media {
+    align-self: stretch;
+    min-height: 130px;
+  }
+  .acard__body {
+    padding-block: 14px;
+    min-width: 0;
+  }
+  .acard__meta {
+    margin: 0 0 4px;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .acard__title {
+    font-size: clamp(1.1rem, 1rem + 0.4vw, 1.3rem);
+    margin: 0 0 4px;
+  }
+  .acard__title a {
+    color: var(--burgundy);
+    text-decoration: none;
+  }
+  .acard__title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .acard__title a:focus-visible {
+    outline: none;
+  }
+  .acard__sum {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .acard__go {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--burgundy-tint);
+    color: var(--burgundy);
+    display: grid;
+    place-items: center;
+  }
+  @media (max-width: 479.98px) {
+    .acard {
+      grid-template-columns: 110px 1fr;
+    }
+    .acard__go {
+      display: none;
+    }
+    .acard__sum {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,9 @@
+---
+import HeroCollage from './HeroCollage.astro';
+import HeroPanorama from './HeroPanorama.astro';
+import type { HeroProps } from './types';
+
+type Props = HeroProps;
+const { variant, ...rest } = Astro.props;
+---
+{variant === 'collage' ? <HeroCollage {...rest} /> : <HeroPanorama {...rest} />}

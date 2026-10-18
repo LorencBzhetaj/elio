@@ -1,0 +1,86 @@
+---
+import Icon, { type IconName } from '../Icon.astro';
+
+const path = Astro.url.pathname;
+const items: { href: string; label: string; icon: IconName; match: string[] }[] = [
+  { href: '/', label: 'Home', icon: 'home', match: ['/'] },
+  { href: '/destinations', label: 'Destinations', icon: 'pin', match: ['/destinations', '/photo-spots'] },
+  { href: '/guides', label: 'Guides', icon: 'book', match: ['/guides', '/my-guides', '/checkout', '/order'] },
+  { href: '/my-trip', label: 'My trip', icon: 'calendar', match: ['/my-trip', '/plan'] },
+];
+const active = (m: string[]) => m.some((p) => (p === '/' ? path === '/' : path === p || path.startsWith(p + '/')));
+---
+<nav class="bottom-nav" aria-label="Quick">
+  <ul>
+    {items.map((item) => (
+      <li>
+        <a href={item.href} aria-current={active(item.match) ? 'page' : undefined}>
+          <Icon name={item.icon} size={24} />
+          <span>{item.label}</span>
+        </a>
+      </li>
+    ))}
+    <li>
+      <button type="button" data-open-menu aria-haspopup="dialog" aria-controls="site-menu">
+        <Icon name="more" size={24} />
+        <span>More</span>
+      </button>
+    </li>
+  </ul>
+</nav>
+
+<style>
+  .bottom-nav {
+    display: none;
+  }
+  @media (max-width: 767.98px) {
+    .bottom-nav {
+      display: block;
+      position: fixed;
+      inset: auto 0 0 0;
+      z-index: 45;
+      background: rgb(255 253 248 / 0.97);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--sand);
+      box-shadow: 0 -6px 20px rgb(41 34 31 / 0.06);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      border-radius: 18px 18px 0 0;
+    }
+    .bottom-nav ul {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .bottom-nav a,
+    .bottom-nav button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      width: 100%;
+      min-height: 64px;
+      background: none;
+      border: 0;
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 0.72rem;
+      cursor: pointer;
+    }
+    .bottom-nav [aria-current='page'] {
+      color: var(--burgundy);
+      font-weight: 700;
+    }
+    .bottom-nav [aria-current='page'] span {
+      box-shadow: 0 3px 0 -1px var(--burgundy);
+    }
+  }
+  /* Hide while the on-screen keyboard is likely open (focused input on small screens). */
+  @media (max-width: 767.98px) and (max-height: 480px) {
+    .bottom-nav {
+      display: none;
+    }
+  }
+</style>

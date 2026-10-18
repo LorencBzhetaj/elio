@@ -1,0 +1,60 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHeader from '../../components/content/PageHeader.astro';
+import GuideCard from '../../components/cards/GuideCard.astro';
+import Icon from '../../components/Icon.astro';
+import { loadContent } from '../../features/content/queries';
+import { loadDisplayPrices } from '../../lib/prices';
+
+export const prerender = false;
+
+const { guides } = await loadContent();
+const prices = await loadDisplayPrices();
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+---
+<BaseLayout title="Digital guides" description="Optional digital guides for Albania: ready-made plans, practical notes and map links. One-time purchase, no account needed.">
+  <PageHeader title="Less planning. More Albania." note="Local insights · Real places" intro="Optional digital guides with ready-made plans, practical notes and map links. Everything practical on this site stays free." />
+  <div class="container section" style="padding-top: 8px">
+    <ul class="gfacts" aria-label="How guides work">
+      <li><Icon name="lock" /> One-time purchase</li>
+      <li><Icon name="mail" /> No account — access by email</li>
+      <li><Icon name="download" /> PDF works offline once downloaded</li>
+      <li><Icon name="map" /> Map links need internet</li>
+    </ul>
+    <ul class="grid ggrid" role="list">
+      {guides.map((g, i) => {
+        const p = prices?.get(g.productSlug);
+        return <li><GuideCard guide={g} price={p ? { amountMinor: p.amountMinor, currency: p.currency } : null} seed={i + 111} headingLevel="h2" /></li>;
+      })}
+    </ul>
+    <p class="muted gnote">Already bought a guide? <a href="/access">Get a new access link</a>.</p>
+  </div>
+</BaseLayout>
+
+<style>
+  .gfacts {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+  }
+  .gfacts li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .gfacts :global(.icon) {
+    color: var(--burgundy);
+  }
+  .ggrid {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  }
+  .gnote {
+    margin-top: 24px;
+  }
+</style>

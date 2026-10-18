@@ -1,0 +1,33 @@
+---
+/** CMS-managed simple pages: about, faq, contact, privacy, terms, refund-policy. */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/content/PageHeader.astro';
+import Blocks from '../components/content/Blocks.astro';
+import VerifyNote from '../components/content/VerifyNote.astro';
+import { loadContent } from '../features/content/queries';
+import type { Page } from '../features/content/schemas';
+import { site } from '../config/site';
+
+export async function getStaticPaths() {
+  const c = await loadContent();
+  return c.pages.map((p) => ({ params: { page: p.slug }, props: { p } }));
+}
+interface Props {
+  p: Page;
+}
+const { p } = Astro.props;
+---
+<BaseLayout title={p.title} description={p.seoDescription ?? p.summary} canonical={p.canonical}>
+  <PageHeader title={p.title} intro={p.summary}>
+    <VerifyNote verified={p.verified} updatedAt={p.updatedAt} />
+  </PageHeader>
+  <article class="container narrow section prose" style="padding-top: 8px">
+    {p.requiresLegalReview && (
+      <div class="notice notice--warn">
+        <p><strong>Draft — not yet legally reviewed.</strong> This policy must be completed and reviewed by the owner and their adviser before any real sale.</p>
+      </div>
+    )}
+    <Blocks blocks={p.body} />
+    {p.slug === 'contact' && <p>Support email: <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a></p>}
+  </article>
+</BaseLayout>

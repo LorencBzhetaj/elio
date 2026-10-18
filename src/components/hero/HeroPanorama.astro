@@ -1,0 +1,264 @@
+---
+/**
+ * Hero B — panoramic direction from the new references: landscape panorama blending into cream,
+ * stacked logo, dark editorial title over a quiet area, search field and burgundy primary action.
+ * Text is HTML, never part of the image. Desktop and mobile crops use separate focal points.
+ */
+import Photo from '../media/Photo.astro';
+import Icon from '../Icon.astro';
+import Logo from '../Logo.astro';
+import Stamp from '../decor/Stamp.astro';
+import type { HeroProps } from './types';
+
+type Props = Omit<HeroProps, 'variant'>;
+const { heading, description, media, primaryAction, secondaryAction, tagline, brand } = Astro.props;
+const image = media[0];
+const features = [
+  { icon: 'pin', label: 'Free destination info' },
+  { icon: 'route', label: 'Ready-made plans' },
+  { icon: 'compass', label: 'Practical essentials' },
+  { icon: 'book', label: 'Optional digital guides' },
+] as const;
+---
+<section class="hero-pano" aria-labelledby="hero-heading">
+  <div class="hero-pano__media">
+    <Photo image={image} priority sizes="100vw" />
+    <div class="hero-pano__fade" aria-hidden="true"></div>
+  </div>
+
+  <div class="container hero-pano__content">
+    <div class="hero-pano__brand">
+      <Logo variant="stacked" brand={brand} />
+      {tagline && <p class="hero-pano__tagline">{tagline}</p>}
+    </div>
+    <div class="hero-pano__stamp" aria-hidden="true"><Stamp /></div>
+
+    <div class="hero-pano__copy">
+      <h1 id="hero-heading">{heading}</h1>
+      <p class="hero-pano__desc">{description}</p>
+      <span class="hero-pano__rule" aria-hidden="true"></span>
+    </div>
+
+    <form class="hero-pano__search" action="/search" method="get" role="search">
+      <Icon name="search" size={22} />
+      <label class="visually-hidden" for="hero-q">Search destinations, beaches, towns</label>
+      <input id="hero-q" type="search" name="q" placeholder="Search destinations, beaches, towns…" autocomplete="off" />
+      <button type="submit" aria-label="Search"><Icon name="arrow-right" size={20} /></button>
+    </form>
+
+    <div class="hero-pano__actions">
+      <a class="btn" href={primaryAction.href}>{primaryAction.label} <Icon name="arrow-right" size={18} /></a>
+      <a class="btn btn--outline" href={secondaryAction.href}><Icon name="bag" size={18} /> {secondaryAction.label}</a>
+    </div>
+
+    <ul class="hero-pano__features">
+      {features.map((f) => (
+        <li><span class="hero-pano__ficon"><Icon name={f.icon} size={22} /></span>{f.label}</li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .hero-pano {
+    position: relative;
+    background: var(--cream);
+    isolation: isolate;
+    margin-top: calc(-1 * var(--header-h));
+  }
+  .hero-pano__media {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: min(78vh, 720px);
+    min-height: 520px;
+    z-index: -1;
+  }
+  .hero-pano__fade {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgb(250 245 235 / 0.94) 0%, rgb(250 245 235 / 0.75) 34%, rgb(250 245 235 / 0) 60%),
+      linear-gradient(180deg, rgb(250 245 235 / 0) 55%, var(--cream) 98%);
+  }
+  .hero-pano__content {
+    position: relative;
+    padding-top: calc(var(--header-h) + 8px);
+    padding-bottom: clamp(24px, 4vw, 48px);
+    display: grid;
+    grid-template-columns: minmax(0, 620px) 1fr;
+    column-gap: 24px;
+  }
+  .hero-pano__brand,
+  .hero-pano__copy,
+  .hero-pano__search,
+  .hero-pano__actions,
+  .hero-pano__features {
+    grid-column: 1;
+  }
+  .hero-pano__tagline {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    line-height: 1.35;
+    max-width: 40ch;
+    margin: 10px 0 0;
+  }
+  .hero-pano__stamp {
+    position: absolute;
+    right: calc(var(--gutter) + 18%);
+    top: calc(var(--header-h) + 10px);
+    width: 180px;
+    opacity: 0.8;
+  }
+  .hero-pano__copy {
+    margin-top: clamp(24px, 4vw, 48px);
+  }
+  .hero-pano__copy h1 {
+    font-size: clamp(2.6rem, 1.6rem + 4vw, 5rem);
+    color: var(--burgundy-dark);
+    margin-bottom: 0.25em;
+  }
+  .hero-pano__desc {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: var(--step-1);
+    max-width: 34ch;
+    margin: 0;
+  }
+  .hero-pano__rule {
+    display: block;
+    width: 96px;
+    height: 2px;
+    background: var(--gold);
+    margin-top: 14px;
+  }
+  .hero-pano__search {
+    margin-top: clamp(24px, 5vw, 56px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--paper);
+    border-radius: 999px;
+    padding: 6px 6px 6px 22px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--sand);
+    max-width: 640px;
+  }
+  .hero-pano__search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    min-height: 48px;
+    font-size: 1.02rem;
+  }
+  .hero-pano__search input:focus-visible {
+    outline: none;
+  }
+  .hero-pano__search:focus-within {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .hero-pano__search button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--burgundy);
+    color: var(--white);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    flex: none;
+  }
+  .hero-pano__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .hero-pano__actions .btn {
+    flex: 0 1 auto;
+    min-width: 190px;
+  }
+  .hero-pano__features {
+    list-style: none;
+    padding: 0;
+    margin: 26px 0 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .hero-pano__features li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    font-size: 0.86rem;
+    line-height: 1.25;
+    padding-inline: 6px;
+  }
+  .hero-pano__features li + li {
+    border-left: 1px solid var(--sand-line);
+  }
+  .hero-pano__ficon {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--burgundy-tint);
+    color: var(--burgundy);
+  }
+
+  @media (max-width: 1023.98px) {
+    .hero-pano__stamp {
+      display: none;
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    .hero-pano__media {
+      height: 480px;
+      min-height: 0;
+    }
+    .hero-pano__fade {
+      background:
+        linear-gradient(180deg, rgb(250 245 235 / 0.7) 0%, rgb(250 245 235 / 0) 32%, rgb(250 245 235 / 0) 58%, var(--cream) 92%),
+        linear-gradient(90deg, rgb(250 245 235 / 0.65) 0%, rgb(250 245 235 / 0) 62%);
+    }
+    .hero-pano__content {
+      grid-template-columns: minmax(0, 1fr);
+      padding-top: calc(var(--header-h) + 4px);
+    }
+    .hero-pano__brand :global(.logo--stacked .logo__text) {
+      font-size: 1.5rem;
+    }
+    .hero-pano__tagline {
+      font-size: 0.95rem;
+    }
+    .hero-pano__copy {
+      margin-top: 150px;
+    }
+    .hero-pano__copy h1 {
+      font-size: clamp(2.3rem, 1.5rem + 4vw, 2.9rem);
+    }
+    .hero-pano__search {
+      margin-top: 28px;
+    }
+    .hero-pano__actions .btn {
+      flex: 1 1 140px;
+      min-width: 0;
+      padding-inline: 12px;
+      white-space: nowrap;
+      font-size: 0.95rem;
+    }
+    .hero-pano__features {
+      grid-template-columns: repeat(2, 1fr);
+      row-gap: 16px;
+    }
+    .hero-pano__features li:nth-child(3) {
+      border-left: 0;
+    }
+  }
+</style>

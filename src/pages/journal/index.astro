@@ -1,0 +1,124 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHeader from '../../components/content/PageHeader.astro';
+import ArticleCard from '../../components/cards/ArticleCard.astro';
+import Photo from '../../components/media/Photo.astro';
+import Icon from '../../components/Icon.astro';
+import { loadContent } from '../../features/content/queries';
+import { articleCategories } from '../../features/content/schemas';
+
+export const prerender = false;
+
+const { articles } = await loadContent();
+const cat = articleCategories.find((c) => c === Astro.url.searchParams.get('category'));
+const list = cat ? articles.filter((a) => a.category === cat) : articles;
+const [lead, ...rest] = list;
+const label = (c: string) => c[0].toUpperCase() + c.slice(1);
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+---
+<BaseLayout title="Travel journal" description="Itineraries, practical tips and stories from across Albania.">
+  <PageHeader title="Travel journal" note="Inspiration, practical tips and local stories." intro="Inspiration, practical tips and stories from across Albania." />
+  <div class="container section" style="padding-top: 8px">
+    <nav aria-label="Filter by category">
+      <ul class="filter-pills">
+        <li><a href="/journal" aria-current={!cat ? 'true' : undefined}>All</a></li>
+        {articleCategories.map((c) => <li><a href={`/journal?category=${c}`} aria-current={cat === c ? 'true' : undefined}>{label(c)}</a></li>)}
+      </ul>
+    </nav>
+    {lead ? (
+      <>
+        <article class="jlead">
+          <Photo image={lead.cover} seed={91} sizes="100vw" />
+          <div class="jlead__shade" aria-hidden="true"></div>
+          <div class="jlead__body">
+            <span class="chip">{lead.category}{lead.readingMinutes && ` · ${lead.readingMinutes} min read`}</span>
+            <h2><a href={`/journal/${lead.slug}`}>{lead.title}</a></h2>
+            <p>{lead.summary}</p>
+          </div>
+          <span class="jlead__go" aria-hidden="true"><Icon name="arrow-right" /></span>
+        </article>
+        {rest.length > 0 && (
+          <>
+            <div class="section-head" style="margin-top: 36px">
+              <h2>Latest stories</h2>
+              <span class="section-head__rule" aria-hidden="true"></span>
+            </div>
+            <ul class="jlist" role="list">
+              {rest.map((a, i) => <li><ArticleCard article={a} seed={i + 92} /></li>)}
+            </ul>
+          </>
+        )}
+      </>
+    ) : (
+      <div class="notice"><p><strong>No stories in this category yet.</strong> <a href="/journal">See all stories</a>.</p></div>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .jlead {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    min-height: clamp(300px, 40vw, 440px);
+    color: #fff;
+    box-shadow: var(--shadow);
+    margin-top: 8px;
+  }
+  .jlead > :global(.photo) {
+    position: absolute;
+    inset: 0;
+  }
+  .jlead:has(a:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .jlead__shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgb(20 14 12 / 0.7), rgb(20 14 12 / 0.1) 75%);
+  }
+  .jlead__body {
+    position: absolute;
+    left: clamp(18px, 4vw, 36px);
+    right: 80px;
+    bottom: clamp(18px, 4vw, 32px);
+    max-width: 560px;
+  }
+  .jlead h2 {
+    color: #fff;
+    font-size: var(--step-4);
+    margin: 12px 0 8px;
+  }
+  .jlead h2 a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .jlead h2 a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .jlead h2 a:focus-visible {
+    outline: none;
+  }
+  .jlead__go {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--burgundy);
+    border: 3px solid #fff;
+    display: grid;
+    place-items: center;
+  }
+  .jlist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 14px;
+  }
+</style>

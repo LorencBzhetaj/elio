@@ -1,0 +1,122 @@
+---
+import type { ImageRef } from '../../features/content/schemas';
+import Scene from './Scene.astro';
+import Icon from '../Icon.astro';
+
+interface Props {
+  image: ImageRef;
+  /** CSS aspect-ratio, e.g. "3 / 2". Omit to fill the parent. */
+  ratio?: string;
+  priority?: boolean;
+  sizes?: string;
+  seed?: number;
+  class?: string;
+  /** Hide the "illustration" chip, e.g. in tiny thumbnails. */
+  hideLabel?: boolean;
+}
+const { image, ratio, priority = false, sizes = '100vw', seed = 1, class: className, hideLabel = false } = Astro.props;
+
+const showLabels = (import.meta.env.PUBLIC_SHOW_PHOTO_PLACEHOLDER_LABELS ?? 'true') !== 'false';
+const pos = (f?: { x: number; y: number }) => (f ? `${Math.round(f.x * 100)}% ${Math.round(f.y * 100)}%` : '50% 50%');
+const align = (f?: { x: number; y: number }) => {
+  if (!f) return 'xMidYMid';
+  const ax = f.x < 0.34 ? 'xMin' : f.x > 0.66 ? 'xMax' : 'xMid';
+  const ay = f.y < 0.34 ? 'YMin' : f.y > 0.66 ? 'YMax' : 'YMid';
+  return ax + ay;
+};
+---
+<div
+  class:list={['photo', className]}
+  style={ratio ? `aspect-ratio:${ratio}` : undefined}
+  data-rights={image.rights}
+>
+  {image.src ? (
+    <picture>
+      {image.srcMobile && <source media="(max-width: 767.98px)" srcset={image.srcMobile} />}
+      <img
+        src={image.src}
+        alt={image.alt}
+        width={image.width}
+        height={image.height}
+        sizes={sizes}
+        loading={priority ? 'eager' : 'lazy'}
+        fetchpriority={priority ? 'high' : 'auto'}
+        decoding={priority ? 'sync' : 'async'}
+        style={`--pos:${pos(image.focal)};--pos-m:${pos(image.focalMobile ?? image.focal)}`}
+      />
+    </picture>
+  ) : (
+    <div class="photo__placeholder" role="img" aria-label={`${image.alt} (illustration, photo pending)`}>
+      <Scene kind={image.scene} seed={seed} align={align(image.focal)} class="photo__scene photo__scene--desktop" />
+      <Scene kind={image.scene} seed={seed} align={align(image.focalMobile ?? image.focal)} class="photo__scene photo__scene--mobile" />
+      {showLabels && !hideLabel && (
+        <span class="photo__label" title={image.needed ?? 'Licensed photo needed'}>
+          <Icon name="camera" size={14} /> Illustration · photo pending
+        </span>
+      )}
+    </div>
+  )}
+  {image.src && image.credit && <span class="photo__credit">{image.credit}</span>}
+</div>
+
+<style>
+  .photo {
+    position: relative;
+    overflow: hidden;
+    background: var(--sand);
+    width: 100%;
+  }
+  .photo:not([style]) {
+    height: 100%;
+  }
+  .photo img,
+  .photo picture,
+  .photo__placeholder {
+    width: 100%;
+    height: 100%;
+  }
+  .photo img {
+    object-fit: cover;
+    object-position: var(--pos);
+  }
+  @media (max-width: 767.98px) {
+    .photo img {
+      object-position: var(--pos-m);
+    }
+  }
+  .photo__placeholder {
+    position: relative;
+  }
+  .photo__scene--mobile {
+    display: none;
+  }
+  @media (max-width: 767.98px) {
+    .photo__scene--desktop {
+      display: none;
+    }
+    .photo__scene--mobile {
+      display: block;
+    }
+  }
+  .photo__label,
+  .photo__credit {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgb(41 34 31 / 0.62);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.5;
+    pointer-events: none;
+    max-width: calc(100% - 16px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>

@@ -1,0 +1,126 @@
+---
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb, getProvider, isLiveMode } from '../../../features/services';
+import { auditLog, entitlements, outboxJobs, paymentEvents } from '../../../db/schema';
+import { getOrderDetail } from '../../../features/commerce/orders';
+import { enqueueJob } from '../../../features/jobs/outbox';
+import { applyFetchedPayment } from '../../../features/payments/reconcile';
+import { formatMoney } from '../../../features/commerce/money';
+import { requireAdmin } from '../../../lib/admin';
+
+export const prerender = false;
+
+const admin = await requireAdmin(Astro.cookies);
+if (!admin) return Astro.redirect('/admin/login', 303);
+
+const db = await getDb();
+const id = Astro.params.id ?? '';
+if (!/^[0-9a-f-]{36}$/i.test(id)) return Astro.redirect('/admin/orders', 303);
+let detail = await getOrderDetail(db, id);
+if (!detail) return Astro.redirect('/admin/orders', 303);
+
+let message = '';
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const action = String(form.get('action'));
+  const audit = (details: Record<string, unknown>) =>
+    db.insert(auditLog).values({ actorEmail: admin.email, action, targetType: 'order', targetId: id, details });
+
+  if (action === 'resend' && detail.order.status === 'paid') {
+    // New unique key so the email is sent again; the link is minted at send time (never stored).
+    await enqueueJob(db, { uniqueKey: `purchase-email:${id}:resend:${Date.now()}`, type: 'purchase-email', payload: { orderId: id } });
+    await audit({});
+    message = 'Access email queued. The worker sends it within a minute.';
+  } else if (action === 'sync') {
+    // Pull authoritative status (incl. refunds made in the provider dashboard) via the provider API.
+    try {
+      const provider = await getProvider(db);
+      const results = [];
+      for (const a of detail.attempts.filter((a) => a.providerReference && a.provider === provider.id)) {
+        results.push((await applyFetchedPayment(db, provider, a.providerReference!, isLiveMode())).outcome);
+      }
+      await audit({ results });
+      const label = (r: string) => (r === 'duplicate_event' ? 'no change' : r.replace(/_/g, ' '));
+      message = `Synced with provider: ${results.map(label).join(', ') || 'no attempts with a provider reference'}.`;
+    } catch (err) {
+      message = `Provider sync failed: ${(err as Error).message}`;
+    }
+  } else if (action === 'revoke') {
+    const itemIds = detail.items.map((i) => i.id);
+    if (itemIds.length) {
+      await db.update(entitlements).set({ status: 'revoked', revokedAt: new Date() }).where(and(inArray(entitlements.orderItemId, itemIds), isNull(entitlements.revokedAt)));
+    }
+    await audit({ reason: String(form.get('reason') ?? '').slice(0, 200) });
+    message = 'Access revoked.';
+  }
+  detail = (await getOrderDetail(db, id))!;
+}
+
+const ents = detail.items.length ? await db.select().from(entitlements).where(inArray(entitlements.orderItemId, detail.items.map((i) => i.id))) : [];
+const refs = detail.attempts.map((a) => a.providerReference).filter(Boolean) as string[];
+const events = refs.length ? await db.select().from(paymentEvents).where(inArray(paymentEvents.providerReference, refs)).orderBy(desc(paymentEvents.receivedAt)) : [];
+const jobs = await db.select().from(outboxJobs).where(eq(outboxJobs.type, 'purchase-email')).orderBy(desc(outboxJobs.createdAt)).limit(200);
+const myJobs = jobs.filter((j) => j.payload.orderId === id);
+const audits = await db.select().from(auditLog).where(eq(auditLog.targetId, id)).orderBy(desc(auditLog.createdAt));
+const o = detail.order;
+const t = (d: Date | null) => (d ? d.toISOString().slice(0, 19).replace('T', ' ') + ' UTC' : '—');
+---
+<AdminLayout title={o.publicReference} email={admin.email}>
+  <p><a href="/admin/orders">← All orders</a></p>
+  <h1>{o.publicReference} <span class={`status status--${o.status}`}>{o.status}</span></h1>
+  {message && <div class="notice" role="status"><p>{message}</p></div>}
+  <dl class="card" style="padding:18px;display:grid;grid-template-columns:max-content 1fr;gap:6px 18px">
+    <dt>Buyer</dt><dd>{o.buyerEmail}</dd>
+    <dt>Total</dt><dd>{formatMoney(o.totalMinor, o.currency)}</dd>
+    <dt>Items</dt><dd>{detail.items.map((i) => `${i.titleSnapshot} (v${i.fulfillmentVersion})`).join(', ')}</dd>
+    <dt>Created</dt><dd>{t(o.createdAt)}</dd>
+    <dt>Paid</dt><dd>{t(o.paidAt)}</dd>
+    <dt>Marketing opt-in</dt><dd>{o.marketingOptIn ? 'yes' : 'no'}</dd>
+  </dl>
+
+  <h2 style="margin-top:24px">Actions</h2>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <form method="post"><input type="hidden" name="action" value="sync" /><button class="btn btn--sm" type="submit">Sync status / refunds from provider</button></form>
+    {o.status === 'paid' && <form method="post"><input type="hidden" name="action" value="resend" /><button class="btn btn--sm btn--outline" type="submit">Resend access email</button></form>}
+    {ents.some((e) => e.status === 'active') && (
+      <form method="post" style="display:flex;gap:6px">
+        <input type="hidden" name="action" value="revoke" />
+        <label class="visually-hidden" for="reason">Reason</label>
+        <input class="input" id="reason" name="reason" placeholder="Reason (required)" required style="min-height:44px" />
+        <button class="btn btn--sm btn--outline" type="submit">Revoke access</button>
+      </form>
+    )}
+  </div>
+  <p class="muted" style="font-size:0.9rem">Refunds are issued in the payment provider’s dashboard (full refunds only in MVP). Then use “Sync” to record the refund and revoke access. A downloaded PDF cannot be recalled.</p>
+
+  <h2>Payment attempts</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Provider</th><th>Reference</th><th>Status</th><th>Amount</th><th>Mode</th><th>Updated</th><th>Note</th></tr></thead>
+    <tbody>{detail.attempts.map((a) => <tr><td>{a.provider}</td><td>{a.providerReference ?? '—'}</td><td><span class={`status status--${a.status}`}>{a.status}</span></td><td>{formatMoney(a.amountMinor, a.currency)}</td><td>{a.livemode ? 'live' : 'test'}</td><td>{t(a.updatedAt)}</td><td>{a.lastError ?? ''}</td></tr>)}</tbody>
+  </table></div>
+
+  <h2>Entitlements</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Status</th><th>Granted</th><th>Revoked</th></tr></thead>
+    <tbody>{ents.map((e) => <tr><td>{e.status}</td><td>{t(e.grantedAt)}</td><td>{t(e.revokedAt)}</td></tr>)}{ents.length === 0 && <tr><td colspan="3">None</td></tr>}</tbody>
+  </table></div>
+
+  <h2>Emails</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Status</th><th>Attempts</th><th>Next attempt</th><th>Last error</th></tr></thead>
+    <tbody>{myJobs.map((j) => <tr><td>{j.status}</td><td>{j.attempts}/{j.maxAttempts}</td><td>{t(j.nextAttemptAt)}</td><td>{j.lastError ?? ''}</td></tr>)}{myJobs.length === 0 && <tr><td colspan="4">None</td></tr>}</tbody>
+  </table></div>
+
+  <h2>Provider events</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Received</th><th>Key</th><th>Verification</th><th>Detail</th></tr></thead>
+    <tbody>{events.map((e) => <tr><td>{t(e.receivedAt)}</td><td>{e.dedupeKey}</td><td>{e.verificationStatus}</td><td>{e.detail ?? ''}</td></tr>)}</tbody>
+  </table></div>
+
+  <h2>Audit log</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Details</th></tr></thead>
+    <tbody>{audits.map((a) => <tr><td>{t(a.createdAt)}</td><td>{a.actorEmail}</td><td>{a.action}</td><td>{JSON.stringify(a.details ?? {})}</td></tr>)}{audits.length === 0 && <tr><td colspan="4">None</td></tr>}</tbody>
+  </table></div>
+</AdminLayout>

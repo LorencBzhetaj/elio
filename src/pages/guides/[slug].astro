@@ -1,0 +1,304 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Photo from '../../components/media/Photo.astro';
+import Icon from '../../components/Icon.astro';
+import VerifyNote from '../../components/content/VerifyNote.astro';
+import { findBySlug, loadContent } from '../../features/content/queries';
+import { formatMoney } from '../../features/commerce/money';
+import { loadDisplayPrices } from '../../lib/prices';
+
+export const prerender = false;
+
+const g = await findBySlug('guides', Astro.params.slug ?? '');
+if (!g) return Astro.rewrite('/404');
+const prices = await loadDisplayPrices();
+const price = prices?.get(g.productSlug);
+const content = await loadContent();
+const dests = content.destinations.filter((d) => g.destinationSlugs.includes(d.slug));
+const priceLabel = price ? formatMoney(price.amountMinor, price.currency) : null;
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+---
+<BaseLayout title={g.title} description={g.seoDescription ?? g.summary} canonical={g.canonical}>
+  <div class="container gp section">
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <ol><li><a href="/guides">Guides</a></li><li aria-current="page">{g.title}</li></ol>
+    </nav>
+    <div class="gp__top">
+      <div class="gp__visual">
+        <div class="gp__book"><Photo image={g.cover} ratio="3 / 4" priority hideLabel seed={121} /><span class="gp__book-title">{g.title}</span></div>
+        <p class="hand gp__note" aria-hidden="true">Everything for your trip, in one place.</p>
+      </div>
+      <div class="gp__info">
+        <h1>{g.title}</h1>
+        <p class="lead">{g.subtitle}</p>
+        <VerifyNote verified={g.verified} updatedAt={g.updatedAt} />
+        <p>{g.summary}</p>
+
+        {g.availability === 'in-production' && (
+          <div class="notice notice--warn"><p><strong>In production.</strong> This page previews the planned guide. Purchases are test-mode only until the final guide is ready.</p></div>
+        )}
+
+        <div class="gp__buy card" id="buy">
+          {priceLabel ? (
+            <>
+              <p class="gp__price">{priceLabel} <span>one-time purchase{price?.isTestProduct && ' · test price'}</span></p>
+              <a class="btn" href={`/checkout/${g.productSlug}`}>Get the guide <Icon name="arrow-right" size={18} /></a>
+            </>
+          ) : (
+            <p class="gp__price"><span>Not available for purchase yet.</span></p>
+          )}
+        </div>
+        <ul class="gp__facts">
+          <li><Icon name="file" size={20} /><span><strong>Format</strong> {g.format}</span></li>
+          <li><Icon name="book" size={20} /><span><strong>Language</strong> {g.language}</span></li>
+          <li><Icon name="wifi-off" size={20} /><span><strong>Online / offline</strong> {g.onlineOffline}</span></li>
+          <li><Icon name="clock" size={20} /><span><strong>Updates</strong> {g.updatePolicy}</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <section class="gp__section" aria-labelledby="inside-h">
+      <div class="section-head"><h2 id="inside-h">What’s inside?</h2><span class="section-head__rule" aria-hidden="true"></span></div>
+      <ol class="gp__contents">
+        {g.contents.map((c, i) => (
+          <li class="card"><span class="gp__num">{String(i + 1).padStart(2, '0')}</span><div><h3>{c.title}</h3><p class="muted">{c.description}</p></div></li>
+        ))}
+      </ol>
+    </section>
+
+    {g.samplePages.length > 0 && (
+      <section class="gp__section" aria-labelledby="samples-h">
+        <div class="section-head"><h2 id="samples-h">Sample pages</h2><span class="section-head__rule" aria-hidden="true"></span></div>
+        <ul class="grid gp__samples" role="list">
+          {g.samplePages.map((s, i) => (
+            <li><figure class="card gp__sample"><Photo image={s.image} ratio="3 / 4" seed={i + 131} /><figcaption><strong>{s.title}</strong><span class="muted">{s.caption}</span></figcaption></figure></li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <section class="gp__section gp__freepaid" aria-labelledby="fp-h">
+      <h2 id="fp-h" class="visually-hidden">Free and paid</h2>
+      <div class="card">
+        <h3><span class="chip">Free on this site</span></h3>
+        <ul>
+          {dests.map((d) => <li><a href={`/destinations/${d.slug}`}>{d.title} destination page</a></li>)}
+          <li><a href="/essentials">Travel essentials</a></li>
+          <li><a href="/photo-spots">Public photo spots</a></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="chip" style="background: var(--sun)">In the guide</span></h3>
+        <ul>{g.contents.map((c) => <li>{c.title}</li>)}</ul>
+      </div>
+    </section>
+
+    {g.faq.length > 0 && (
+      <section class="gp__section" aria-labelledby="faq-h">
+        <h2 id="faq-h">Questions</h2>
+        {g.faq.map((f) => <details class="gp__faq"><summary>{f.q}</summary><p>{f.a}</p></details>)}
+      </section>
+    )}
+  </div>
+
+  {priceLabel && (
+    <div class="buybar" aria-label="Buy this guide">
+      <p class="buybar__price">{priceLabel}<span> one-time</span></p>
+      <a class="btn" href={`/checkout/${g.productSlug}`}>Get the guide <Icon name="arrow-right" size={18} /></a>
+    </div>
+  )}
+</BaseLayout>
+
+<style>
+  .gp__top {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: clamp(24px, 4vw, 56px);
+    align-items: start;
+  }
+  @media (max-width: 899.98px) {
+    .gp__top {
+      grid-template-columns: 1fr;
+    }
+  }
+  .gp__visual {
+    position: relative;
+    padding: 24px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(160deg, var(--sky), var(--cream-deep));
+  }
+  .gp__book {
+    position: relative;
+    max-width: min(300px, 60vw);
+    margin: 0 auto;
+    border-radius: 6px 14px 14px 6px;
+    overflow: hidden;
+    box-shadow: -8px 0 0 #3b2b26 inset, var(--shadow-lift);
+    transform: rotate(-3deg);
+  }
+  .gp__book-title {
+    position: absolute;
+    top: 18px;
+    left: 22px;
+    right: 18px;
+    font-family: var(--font-display);
+    font-size: 2rem;
+    line-height: 1;
+    color: #1f1a18;
+    text-transform: uppercase;
+    text-shadow: 0 1px 0 rgb(255 255 255 / 0.6);
+  }
+  .gp__note {
+    text-align: center;
+    font-size: 1.4rem;
+    margin: 16px 0 0;
+  }
+  .gp__info h1 {
+    font-size: var(--step-5);
+    margin-bottom: 0.1em;
+  }
+  .gp__buy {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: linear-gradient(100deg, #fff7df, var(--paper));
+  }
+  .gp__price {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 2.4rem;
+    line-height: 1;
+    color: var(--ink);
+  }
+  .gp__price span {
+    font-family: var(--font-ui);
+    font-size: 0.95rem;
+    color: var(--muted);
+  }
+  .gp__facts {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .gp__facts li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .gp__facts :global(.icon) {
+    color: var(--burgundy);
+    flex: none;
+    margin-top: 3px;
+  }
+  .gp__facts strong {
+    display: block;
+  }
+  .gp__section {
+    margin-top: clamp(36px, 5vw, 56px);
+  }
+  .gp__contents {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    gap: 16px;
+  }
+  .gp__contents li {
+    display: flex;
+    gap: 14px;
+    padding: 18px;
+  }
+  .gp__contents h3 {
+    margin: 0 0 4px;
+  }
+  .gp__contents p {
+    margin: 0;
+  }
+  .gp__num {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    color: var(--gold);
+  }
+  .gp__samples {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  }
+  .gp__sample {
+    margin: 0;
+    overflow: hidden;
+  }
+  .gp__sample figcaption {
+    display: grid;
+    padding: 12px 14px;
+  }
+  .gp__freepaid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 639.98px) {
+    .gp__freepaid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .gp__freepaid .card {
+    padding: 20px;
+  }
+  .gp__freepaid ul {
+    margin: 0;
+    padding-left: 1.2em;
+  }
+  .gp__faq {
+    border-bottom: 1px solid var(--sand);
+    padding: 4px 0;
+    max-width: 760px;
+  }
+  .gp__faq summary {
+    cursor: pointer;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+  }
+  /* Sticky buy bar: product pages only, mobile only, above the bottom nav. */
+  .buybar {
+    display: none;
+  }
+  @media (max-width: 767.98px) {
+    .buybar {
+      display: flex;
+      position: sticky;
+      bottom: calc(var(--bottom-nav-h) + 8px);
+      z-index: 30;
+      margin: 0 var(--gutter) 12px;
+      padding: 10px 10px 10px 18px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--paper);
+      border-radius: 18px;
+      box-shadow: var(--shadow-lift);
+      border: 1px solid var(--sand);
+    }
+    .buybar__price {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      line-height: 1;
+    }
+    .buybar__price span {
+      font-family: var(--font-ui);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  }
+</style>

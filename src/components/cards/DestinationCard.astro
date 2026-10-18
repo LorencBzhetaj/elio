@@ -1,0 +1,104 @@
+---
+import Photo from '../media/Photo.astro';
+import Icon from '../Icon.astro';
+import type { Destination } from '../../features/content/schemas';
+
+interface Props {
+  destination: Destination;
+  tag?: string;
+  seed?: number;
+  headingLevel?: 'h2' | 'h3';
+}
+const { destination: d, tag, seed = 1, headingLevel: H = 'h3' } = Astro.props;
+---
+<article class="dcard">
+  <Photo image={d.cover} ratio="4 / 5" seed={seed} sizes="(max-width: 767px) 45vw, 25vw" hideLabel />
+  <div class="dcard__shade" aria-hidden="true"></div>
+  {tag && <span class="chip dcard__tag">{tag}</span>}
+  <div class="dcard__body">
+    <H class="dcard__title"><a href={`/destinations/${d.slug}`}>{d.title}</a></H>
+    <p class="dcard__kicker">{d.kicker}</p>
+  </div>
+  <span class="dcard__go" aria-hidden="true"><Icon name="arrow-right" size={18} /></span>
+</article>
+
+<style>
+  .dcard {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    color: var(--white);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .dcard:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+  }
+  .dcard__shade {
+    position: absolute;
+    inset: 40% 0 0 0;
+    background: linear-gradient(180deg, rgb(20 14 12 / 0) 0%, rgb(20 14 12 / 0.72) 100%);
+  }
+  .dcard__tag {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgb(255 253 248 / 0.92);
+  }
+  .dcard__body {
+    position: absolute;
+    left: 16px;
+    right: 60px;
+    bottom: 14px;
+  }
+  .dcard__title {
+    color: var(--white);
+    font-size: clamp(1.3rem, 1.1rem + 0.6vw, 1.7rem);
+    margin: 0;
+  }
+  .dcard__title a {
+    color: inherit;
+    text-decoration: none;
+  }
+  /* Whole card is clickable via the heading link. */
+  .dcard__title a::after {
+    content: '';
+    position: absolute;
+    inset: -1000px;
+  }
+  .dcard__title a:focus-visible {
+    outline: none;
+  }
+  .dcard:has(a:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .dcard__kicker {
+    margin: 2px 0 0;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    opacity: 0.95;
+  }
+  .dcard__go {
+    position: absolute;
+    right: 12px;
+    bottom: 14px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--white);
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+  }
+  .dcard {
+    isolation: isolate;
+  }
+  .dcard__body {
+    overflow: visible;
+  }
+  .dcard {
+    contain: paint;
+  }
+</style>

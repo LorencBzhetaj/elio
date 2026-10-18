@@ -1,0 +1,91 @@
+---
+import '@fontsource/dm-serif-display/latin-400.css';
+import '@fontsource/dm-serif-display/latin-400-italic.css';
+import '@fontsource-variable/dm-sans/index.css';
+import '@fontsource/caveat/latin-500.css';
+import '../styles/global.css';
+import Header from '../components/layout/Header.astro';
+import Footer from '../components/layout/Footer.astro';
+import BottomNav from '../components/layout/BottomNav.astro';
+import MenuDialog from '../components/layout/MenuDialog.astro';
+import { site } from '../config/site';
+
+interface Props {
+  title: string;
+  description?: string;
+  /** Private, transactional, preview and search pages. */
+  noindex?: boolean;
+  canonical?: string;
+  headerOverlay?: boolean;
+  /** JSON-LD for content that actually exists on the page. */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  brand?: string;
+  ogImage?: string;
+}
+const {
+  title,
+  description = 'Free, practical travel information for Albania — destinations, essentials, photo spots and events — plus optional digital guides.',
+  noindex = false,
+  canonical,
+  headerOverlay = false,
+  jsonLd,
+  brand = site.brandName,
+  ogImage,
+} = Astro.props;
+
+const fullTitle = title === brand ? title : `${title} · ${brand}`;
+const canonicalUrl = canonical ?? (Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined);
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    {noindex ? <meta name="robots" content="noindex, nofollow" /> : canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    <meta name="theme-color" content="#faf5eb" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:site_name" content={brand} />
+    {canonicalUrl && !noindex && <meta property="og:url" content={canonicalUrl} />}
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <slot name="top" />
+    {site.showDraftBanner && (
+      <div class="draft-banner" role="note">
+        Pre-launch build: sample content, illustrations instead of photos and test-mode checkout. Nothing here is a real offer yet.
+      </div>
+    )}
+    <Header overlay={headerOverlay} brand={brand} />
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <Footer brand={brand} />
+    <BottomNav />
+    <MenuDialog />
+  </body>
+</html>
+
+<style>
+  .draft-banner {
+    background: #fff3cd;
+    color: #5b4300;
+    font-size: 0.82rem;
+    text-align: center;
+    padding: 6px var(--gutter);
+    position: relative;
+    z-index: 41;
+  }
+  main:focus {
+    outline: none;
+  }
+</style>

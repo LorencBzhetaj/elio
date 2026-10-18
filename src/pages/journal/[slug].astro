@@ -1,0 +1,86 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Photo from '../../components/media/Photo.astro';
+import Blocks from '../../components/content/Blocks.astro';
+import VerifyNote from '../../components/content/VerifyNote.astro';
+import GuidePromo from '../../components/content/GuidePromo.astro';
+import DestinationCard from '../../components/cards/DestinationCard.astro';
+import { loadContent } from '../../features/content/queries';
+import type { Article } from '../../features/content/schemas';
+
+export async function getStaticPaths() {
+  const c = await loadContent();
+  return c.articles.map((a) => ({ params: { slug: a.slug }, props: { a } }));
+}
+interface Props {
+  a: Article;
+}
+const { a } = Astro.props;
+const content = await loadContent();
+const guide = content.guides.find((g) => g.productSlug === a.relatedGuideProductId);
+const dests = content.destinations.filter((d) => a.destinationSlugs.includes(d.slug));
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: a.title,
+  description: a.summary,
+  dateModified: a.updatedAt,
+  author: { '@type': 'Organization', name: a.author },
+};
+---
+<BaseLayout title={a.title} description={a.seoDescription ?? a.summary} jsonLd={jsonLd} canonical={a.canonical}>
+  <article>
+    <header class="container narrow art-head">
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <ol><li><a href="/journal">Journal</a></li><li aria-current="page">{a.title}</li></ol>
+      </nav>
+      <p class="eyebrow">{a.category}{a.readingMinutes && ` · ${a.readingMinutes} min read`}</p>
+      <h1>{a.title}</h1>
+      <p class="lead">{a.summary}</p>
+      <p class="muted">By {a.author}</p>
+      <VerifyNote verified={a.verified} updatedAt={a.updatedAt} />
+    </header>
+    <div class="container art-cover"><Photo image={a.cover} ratio="16 / 8" priority sizes="100vw" /></div>
+    <div class="container narrow prose art-body">
+      <Blocks blocks={a.body} />
+      {guide && <div class="art-promo"><GuidePromo guide={guide} /></div>}
+    </div>
+  </article>
+  {dests.length > 0 && (
+    <section class="section section--tint" aria-labelledby="dest-h">
+      <div class="container">
+        <h2 id="dest-h">Destinations in this story</h2>
+        <ul class="grid art-dests" role="list">
+          {dests.map((d, i) => <li><DestinationCard destination={d} seed={i + 101} /></li>)}
+        </ul>
+      </div>
+    </section>
+  )}
+</BaseLayout>
+
+<style>
+  .art-head {
+    padding-top: clamp(24px, 5vw, 48px);
+  }
+  .art-head h1 {
+    font-size: var(--step-4);
+  }
+  .art-cover {
+    margin-block: 12px 24px;
+  }
+  .art-cover :global(.photo) {
+    border-radius: var(--radius-lg);
+  }
+  .art-body {
+    padding-bottom: 40px;
+  }
+  .art-promo {
+    margin-top: 32px;
+  }
+  .art-dests {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  }
+</style>

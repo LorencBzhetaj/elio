@@ -1,0 +1,247 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/content/PageHeader.astro';
+import Icon from '../components/Icon.astro';
+import { loadContent } from '../features/content/queries';
+import { interestTags } from '../features/content/schemas';
+
+const content = await loadContent();
+const destinations = content.destinations.map((d) => ({ slug: d.slug, title: d.title, kicker: d.kicker, interests: d.interests, region: d.region }));
+const labels: Record<string, string> = {
+  beaches: 'Beaches', nature: 'Nature', hiking: 'Hiking', culture: 'Culture', food: 'Food',
+  'historic-towns': 'Historic towns', photography: 'Photography', 'hidden-gems': 'Hidden gems',
+};
+---
+<BaseLayout title="Plan your trip" description="Set up your days and collect Albanian destinations by interest. Saved on your device, no account needed.">
+  <PageHeader
+    title="Plan your trip"
+    note="Your adventure starts here."
+    intro="Choose how many days you have and what you enjoy. We’ll show matching destinations — you decide what goes on which day."
+    crumbs={[{ href: '/my-trip', label: 'My trip' }]}
+  />
+  <div class="container narrow section" style="padding-top: 8px">
+    <form id="plan-form" class="card plan-card" novalidate>
+      <fieldset class="field">
+        <legend><Icon name="calendar" size={20} /> Your days</legend>
+        <div class="plan-row">
+          <div class="field">
+            <label for="days">Number of days</label>
+            <select id="days" name="days" class="input">
+              {Array.from({ length: 14 }, (_, i) => <option value={i + 1} selected={i === 6}>{i + 1} {i === 0 ? 'day' : 'days'}</option>)}
+            </select>
+          </div>
+          <div class="field">
+            <label for="start">Start date <span class="muted">(optional)</span></label>
+            <input id="start" name="start" type="date" class="input" />
+          </div>
+        </div>
+      </fieldset>
+      <fieldset class="field">
+        <legend><Icon name="heart" size={20} /> What are you interested in?</legend>
+        <div class="plan-interests">
+          {interestTags.map((t) => (
+            <label class="plan-chip"><input type="checkbox" name="interest" value={t} /> <span>{labels[t]}</span></label>
+          ))}
+        </div>
+      </fieldset>
+      <button class="btn btn--block" type="submit"><Icon name="sparkle" size={18} /> Set up my days &amp; show ideas</button>
+      <p class="muted plan-note">Your plan is saved in this browser only. It does not sync between devices and is removed if you clear browser data. We don’t calculate routes or travel times.</p>
+    </form>
+
+    <section id="ideas" class="plan-ideas" aria-labelledby="ideas-h" hidden>
+      <h2 id="ideas-h">Ideas for your trip</h2>
+      <p class="muted" id="ideas-count" role="status" aria-live="polite"></p>
+      <ul id="ideas-list" class="plan-list" role="list"></ul>
+      <a class="btn" href="/my-trip">Go to my trip <Icon name="arrow-right" size={18} /></a>
+    </section>
+  </div>
+  <script type="application/json" id="destinations-data" set:html={JSON.stringify(destinations)} />
+</BaseLayout>
+
+<script>
+  import { addDestination, findDestination, setDayCount, setStartDate } from '../features/trip/model';
+  import { loadTrip, saveTrip } from '../features/trip/storage';
+
+  type D = { slug: string; title: string; kicker: string; interests: string[] };
+  const all: D[] = JSON.parse(document.getElementById('destinations-data')!.textContent || '[]');
+  const form = document.getElementById('plan-form') as HTMLFormElement;
+  const ideas = document.getElementById('ideas')!;
+  const list = document.getElementById('ideas-list')!;
+  const count = document.getElementById('ideas-count')!;
+
+  const initial = loadTrip();
+  if (initial.status !== 'unavailable') {
+    (form.elements.namedItem('days') as HTMLSelectElement).value = String(initial.trip.days.length > 1 ? initial.trip.days.length : 7);
+    if (initial.trip.days[0].date) (form.elements.namedItem('start') as HTMLInputElement).value = initial.trip.days[0].date;
+  }
+
+  function renderIdeas(selected: string[]) {
+    const { trip } = loadTrip();
+    const matches = selected.length ? all.filter((d) => d.interests.some((i) => selected.includes(i))) : all;
+    list.replaceChildren();
+    count.textContent = `${matches.length} ${matches.length === 1 ? 'destination matches' : 'destinations match'} your interests.`;
+    for (const d of matches) {
+      const li = document.createElement('li');
+      li.className = 'card plan-item';
+      const text = document.createElement('div');
+      const a = document.createElement('a');
+      a.href = `/destinations/${d.slug}`;
+      a.textContent = d.title;
+      a.className = 'plan-item__title';
+      const k = document.createElement('p');
+      k.className = 'muted';
+      k.textContent = d.kicker;
+      text.append(a, k);
+
+      const controls = document.createElement('div');
+      controls.className = 'plan-item__controls';
+      const pos = findDestination(trip, d.slug);
+      if (pos) {
+        const saved = document.createElement('p');
+        saved.className = 'plan-item__saved';
+        saved.textContent = `Saved · day ${pos.day + 1}`;
+        controls.append(saved);
+      } else {
+        const sel = document.createElement('select');
+        sel.className = 'input';
+        sel.setAttribute('aria-label', `Day for ${d.title}`);
+        trip.days.forEach((day, i) => sel.add(new Option(`Day ${i + 1}${day.date ? ` · ${day.date}` : ''}`, String(i))));
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn--sm';
+        btn.textContent = 'Add';
+        btn.setAttribute('aria-label', `Add ${d.title} to selected day`);
+        btn.addEventListener('click', () => {
+          const current = loadTrip().trip;
+          const r = addDestination(current, d.slug, Number(sel.value));
+          if (r.added && saveTrip(r.trip)) renderIdeas(selected);
+          else count.textContent = 'Could not save — browser storage is full or blocked.';
+        });
+        controls.append(sel, btn);
+      }
+      li.append(text, controls);
+      list.append(li);
+    }
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    const { trip, status } = loadTrip();
+    if (status === 'unavailable') {
+      count.textContent = 'Your browser is blocking storage, so a trip cannot be saved here.';
+      ideas.hidden = false;
+      return;
+    }
+    let next = setDayCount(trip, Number(data.get('days')));
+    next = setStartDate(next, (data.get('start') as string) || null);
+    saveTrip(next);
+    ideas.hidden = false;
+    renderIdeas(data.getAll('interest').map(String));
+    document.getElementById('ideas-h')!.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    (document.getElementById('ideas-h') as HTMLElement).focus({ preventScroll: true });
+  });
+  document.getElementById('ideas-h')!.setAttribute('tabindex', '-1');
+</script>
+
+<style>
+  .plan-card {
+    padding: clamp(18px, 3vw, 28px);
+  }
+  fieldset.field {
+    border: 0;
+    padding: 0;
+    margin: 0 0 22px;
+  }
+  legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    color: var(--burgundy-dark);
+    margin-bottom: 10px;
+    font-weight: 400 !important;
+  }
+  .plan-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 479.98px) {
+    .plan-row {
+      grid-template-columns: 1fr;
+    }
+  }
+  .plan-interests {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .plan-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 8px 14px;
+    border-radius: 12px;
+    border: 1.5px solid var(--sand-line);
+    background: var(--white);
+    cursor: pointer;
+  }
+  .plan-chip:has(input:checked) {
+    border-color: var(--gold);
+    background: #fff6dc;
+  }
+  .plan-chip input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--burgundy);
+  }
+  .plan-note {
+    font-size: 0.88rem;
+    margin: 14px 0 0;
+  }
+  .plan-ideas {
+    margin-top: 36px;
+  }
+  .plan-ideas h2:focus {
+    outline: none;
+  }
+  .plan-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+    display: grid;
+    gap: 12px;
+  }
+  .plan-list :global(.plan-item) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+  }
+  .plan-list :global(.plan-item p) {
+    margin: 0;
+  }
+  .plan-list :global(.plan-item__title) {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    text-decoration: none;
+  }
+  .plan-list :global(.plan-item__controls) {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .plan-list :global(.plan-item__controls select) {
+    width: auto;
+    min-width: 120px;
+  }
+  .plan-list :global(.plan-item__saved) {
+    color: var(--burgundy);
+    font-weight: 600;
+  }
+</style>

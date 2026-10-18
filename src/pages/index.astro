@@ -1,0 +1,13 @@
+---
+/** Public homepage. Renders ONLY the configured hero variant (HOMEPAGE_HERO_VARIANT / CMS setting). */
+import HomePage from '../components/home/HomePage.astro';
+import { getSiteSettings } from '../features/content/queries';
+import { loadDisplayPrices } from '../lib/prices';
+
+export const prerender = false;
+
+const { heroVariant } = await getSiteSettings();
+const prices = await loadDisplayPrices();
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+---
+<HomePage variant={heroVariant} prices={prices} />

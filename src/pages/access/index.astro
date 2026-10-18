@@ -1,0 +1,62 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Icon from '../../components/Icon.astro';
+import { getDb } from '../../features/services';
+import { requestAccessLink } from '../../features/access/tokens';
+import { rateLimit } from '../../lib/rate-limit';
+
+export const prerender = false;
+
+let sent = false;
+let limited = false;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (!rateLimit(`access:${Astro.clientAddress}`, 10, 15 * 60_000)) {
+    limited = true;
+  } else {
+    await requestAccessLink(await getDb(), String(form.get('email') ?? ''), { role: 'buyer' });
+    sent = true; // Same message whether or not the address has purchases.
+  }
+}
+const expired = Astro.url.searchParams.get('reason') === 'expired';
+---
+<BaseLayout title="Access your guides" noindex>
+  <div class="container narrow section">
+    <h1>Access your guides</h1>
+    {expired && <div class="notice notice--warn"><p><strong>That link has expired or was already used.</strong> Access links work once and expire after a short time. Request a new one below.</p></div>}
+    {sent ? (
+      <div class="card acc">
+        <span class="acc__icon"><Icon name="mail" size={30} /></span>
+        <h2>Check your inbox</h2>
+        <p>If that email address has a purchase, we’ve sent a new access link. It works once and expires soon. Check your spam folder too.</p>
+        <p class="muted">Nothing arriving? Make sure you used the same email as at checkout, or contact support with your order reference.</p>
+      </div>
+    ) : (
+      <form method="post" class="card acc">
+        <p class="lead">Enter the email you used at checkout. We’ll send you a secure, single-use link — no password needed.</p>
+        {limited && <div class="notice notice--warn" role="alert"><p>Too many requests from this connection. Please wait a few minutes and try again.</p></div>}
+        <div class="field">
+          <label for="email">Email address</label>
+          <input class="input" id="email" name="email" type="email" required autocomplete="email" />
+        </div>
+        <button class="btn" type="submit"><Icon name="mail" size={18} /> Send me a link</button>
+      </form>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .acc {
+    padding: clamp(20px, 4vw, 32px);
+    margin-top: 16px;
+  }
+  .acc__icon {
+    display: inline-grid;
+    place-items: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--burgundy-tint);
+    color: var(--burgundy);
+  }
+</style>

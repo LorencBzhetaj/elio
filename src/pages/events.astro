@@ -1,0 +1,88 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/content/PageHeader.astro';
+import Icon from '../components/Icon.astro';
+import { loadContent, formatUpdated } from '../features/content/queries';
+import { formatEventDate, upcomingEvents } from '../features/content/events';
+
+// Filtered at request time so past events disappear without waiting for a rebuild.
+export const prerender = false;
+
+const content = await loadContent();
+const destination = content.destinations.find((d) => d.slug === Astro.url.searchParams.get('destination'));
+const events = upcomingEvents(content.events).filter((e) => !destination || e.destinationSlug === destination.slug);
+const destName = (slug?: string) => content.destinations.find((d) => d.slug === slug)?.title;
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=600');
+---
+<BaseLayout title="Events" description="Upcoming events in Albania with organiser links and last-checked dates.">
+  <PageHeader title="What’s on" note="Festivals, markets & local life" intro="Upcoming events with organiser links. Dates are in Albanian time (Europe/Tirane); always confirm with the organiser before you go." />
+  <div class="container section" style="padding-top: 8px">
+    {content.destinations.length > 0 && (
+      <nav aria-label="Filter by destination">
+        <ul class="filter-pills">
+          <li><a href="/events" aria-current={!destination ? 'true' : undefined}>Everywhere</a></li>
+          {content.destinations.map((d) => <li><a href={`/events?destination=${d.slug}`} aria-current={destination?.slug === d.slug ? 'true' : undefined}>{d.title}</a></li>)}
+        </ul>
+      </nav>
+    )}
+    {events.length > 0 ? (
+      <ul class="ev-list" role="list">
+        {events.map((e) => (
+          <li class="card ev" id={e.slug}>
+            <p class="ev__date"><Icon name="calendar" size={18} /> {formatEventDate(e)}</p>
+            <h2 class="ev__title">{e.title}</h2>
+            <p>{e.summary}</p>
+            <p class="muted ev__meta">
+              {[e.venue, destName(e.destinationSlug)].filter(Boolean).join(' · ')}
+            </p>
+            <p class="ev__links">
+              <a href={e.organizerUrl} rel="noopener noreferrer" target="_blank">Organiser <Icon name="external" size={14} /><span class="visually-hidden"> (opens in a new tab)</span></a>
+              <span class="muted">Last checked {formatUpdated(e.lastCheckedAt)} · <a href={e.sourceUrl} rel="noopener noreferrer" target="_blank">source<span class="visually-hidden"> (opens in a new tab)</span></a></span>
+            </p>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <div class="notice">
+        <p><strong>No upcoming events listed{destination ? ` for ${destination.title}` : ''}.</strong></p>
+        <p>We only list events with a named organiser, a source link and a recent check date. Meanwhile, explore <a href="/destinations">destinations</a> or the <a href="/journal">journal</a>.</p>
+      </div>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .ev-list {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0;
+    display: grid;
+    gap: 16px;
+  }
+  .ev {
+    padding: 20px 22px;
+  }
+  .ev__date {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-weight: 600;
+    color: var(--burgundy);
+    margin-bottom: 4px;
+  }
+  .ev__title {
+    font-size: var(--step-2);
+  }
+  .ev__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    align-items: center;
+    margin: 0;
+  }
+  .ev__links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+</style>

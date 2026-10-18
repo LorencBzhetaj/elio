@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+---
+<BaseLayout title="Page not found" noindex>
+  <div class="container narrow section nf">
+    <p class="hand nf__note" aria-hidden="true">Off the map…</p>
+    <h1>We couldn’t find that page</h1>
+    <p class="lead">It may have moved, or the link may be mistyped.</p>
+    <form action="/search" method="get" role="search" class="nf__search">
+      <label for="nf-q" class="visually-hidden">Search the site</label>
+      <input id="nf-q" class="input" type="search" name="q" placeholder="Search destinations, beaches, towns…" />
+      <button class="btn" type="submit"><Icon name="search" size={18} /> Search</button>
+    </form>
+    <p><a href="/">Back to the homepage</a> · <a href="/destinations">Destinations</a> · <a href="/guides">Guides</a></p>
+  </div>
+</BaseLayout>
+
+<style>
+  .nf__note {
+    font-size: 1.8rem;
+    margin: 0;
+  }
+  .nf__search {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+    max-width: 560px;
+  }
+  @media (max-width: 479.98px) {
+    .nf__search {
+      flex-direction: column;
+    }
+  }
+</style>

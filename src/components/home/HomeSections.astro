@@ -1,0 +1,306 @@
+---
+/** Everything below the hero. Identical for Hero A and Hero B so the client compares only the hero. */
+import DestinationCard from '../cards/DestinationCard.astro';
+import GuideCard from '../cards/GuideCard.astro';
+import SpotCard from '../cards/SpotCard.astro';
+import ArticleCard from '../cards/ArticleCard.astro';
+import Photo from '../media/Photo.astro';
+import Icon from '../Icon.astro';
+import type { ContentBundle } from '../../features/content/schemas';
+import type { CatalogPrice } from '../../features/commerce/catalog';
+import { upcomingEvents, formatEventDate } from '../../features/content/events';
+
+interface Props {
+  content: ContentBundle;
+  prices: Map<string, CatalogPrice> | null;
+}
+const { content, prices } = Astro.props;
+
+const featured = [...content.destinations].sort((a, b) => Number(b.featured) - Number(a.featured)).slice(0, 4);
+const tagFor = (types: string[]) => (types.includes('coast') ? 'Coast' : types.includes('mountains') ? 'Nature' : types.includes('historic-town') ? 'Heritage' : 'City');
+const guides = content.guides.slice(0, 3);
+const spots = content.places.slice(0, 3);
+const [lead, ...rest] = content.articles;
+const events = upcomingEvents(content.events).slice(0, 3);
+---
+<section class="section" aria-labelledby="h-dest">
+  <div class="container">
+    <div class="section-head">
+      <h2 id="h-dest">Find your Albania</h2>
+      <span class="section-head__rule" aria-hidden="true"></span>
+      <a class="section-head__link" href="/destinations">View all <Icon name="arrow-right" size={18} /></a>
+    </div>
+    <ul class="grid home-dest" role="list">
+      {featured.map((d, i) => <li><DestinationCard destination={d} tag={i === 0 ? 'Featured' : tagFor(d.types)} seed={i + 11} /></li>)}
+    </ul>
+  </div>
+</section>
+
+<section class="section section--tint" aria-labelledby="h-free">
+  <div class="container">
+    <div class="section-head">
+      <h2 id="h-free">Start free. Go deeper.</h2>
+      <span class="section-head__rule" aria-hidden="true"></span>
+      <a class="section-head__link" href="/guides">All guides <Icon name="arrow-right" size={18} /></a>
+    </div>
+    <div class="home-free">
+      <div class="card home-free__card">
+        <span class="chip">Free</span>
+        <h3>Everything you need to start</h3>
+        <ul class="home-free__list">
+          <li><Icon name="pin" /><a href="/destinations">Destination pages</a></li>
+          <li><Icon name="compass" /><a href="/essentials">Transport, money &amp; connectivity</a></li>
+          <li><Icon name="camera" /><a href="/photo-spots">Photo spots</a></li>
+          <li><Icon name="calendar" /><a href="/events">Events</a></li>
+          <li><Icon name="list" /><a href="/plan">Trip planner (saved on your device)</a></li>
+        </ul>
+        <p class="muted home-free__note">No account, no paywall on practical information.</p>
+      </div>
+      <ul class="grid home-guides" role="list">
+        {guides.map((g, i) => {
+          const p = prices?.get(g.productSlug);
+          return <li><GuideCard guide={g} price={p ? { amountMinor: p.amountMinor, currency: p.currency } : null} seed={i + 21} /></li>;
+        })}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="h-spots">
+  <div class="container">
+    <div class="section-head">
+      <h2 id="h-spots">The spots worth saving</h2>
+      <span class="section-head__rule" aria-hidden="true"></span>
+      <a class="section-head__link" href="/photo-spots">More spots <Icon name="arrow-right" size={18} /></a>
+    </div>
+    <ul class="grid grid--3" role="list">
+      {spots.map((p, i) => <li><SpotCard place={p} seed={i + 31} /></li>)}
+    </ul>
+  </div>
+</section>
+
+{lead && (
+  <section class="section section--tint" aria-labelledby="h-journal">
+    <div class="container">
+      <div class="section-head">
+        <h2 id="h-journal">From the journal</h2>
+        <span class="section-head__rule" aria-hidden="true"></span>
+        <a class="section-head__link" href="/journal">View all <Icon name="arrow-right" size={18} /></a>
+      </div>
+      <div class="home-journal">
+        <article class="home-journal__lead">
+          <Photo image={lead.cover} seed={41} sizes="(max-width: 767px) 100vw, 55vw" />
+          <div class="home-journal__shade" aria-hidden="true"></div>
+          <div class="home-journal__body">
+            <span class="chip">{lead.category}</span>
+            <h3><a href={`/journal/${lead.slug}`}>{lead.title}</a></h3>
+            <p>{lead.summary}</p>
+          </div>
+        </article>
+        <ul class="home-journal__list" role="list">
+          {rest.slice(0, 3).map((a, i) => <li><ArticleCard article={a} seed={i + 42} /></li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+)}
+
+<section class="section" aria-labelledby="h-events">
+  <div class="container">
+    <div class="section-head">
+      <h2 id="h-events">What’s on</h2>
+      <span class="section-head__rule" aria-hidden="true"></span>
+      <a class="section-head__link" href="/events">All events <Icon name="arrow-right" size={18} /></a>
+    </div>
+    {events.length > 0 ? (
+      <ul class="grid grid--3" role="list">
+        {events.map((e) => (
+          <li class="card home-event">
+            <p class="eyebrow">{formatEventDate(e)}</p>
+            <h3><a href={`/events#${e.slug}`}>{e.title}</a></h3>
+            <p class="muted">{e.summary}</p>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <div class="notice">
+        <p><strong>No upcoming events listed yet.</strong> We only publish events with an organiser source and a recent check date.</p>
+      </div>
+    )}
+  </div>
+</section>
+
+<section class="section" aria-labelledby="h-plan">
+  <div class="container">
+    <div class="home-plan card">
+      <svg class="home-plan__art" viewBox="0 0 120 90" aria-hidden="true" focusable="false">
+        <path d="M10 80 L10 40 L30 25 L50 40 L50 80Z M50 80 L50 30 L70 12 L90 30 L90 80Z" fill="none" stroke="currentColor" stroke-width="1.5" />
+        <path d="M5 80 H115" stroke="currentColor" stroke-width="1.5" />
+        <rect x="64" y="50" width="12" height="30" fill="none" stroke="currentColor" stroke-width="1.5" />
+      </svg>
+      <div>
+        <h2 id="h-plan" class="home-plan__title">Save places. Shape your days.</h2>
+        <p class="muted">Collect destinations and arrange them day by day. Your plan stays on this device — no account needed.</p>
+      </div>
+      <a class="btn" href="/plan">Start planning <Icon name="arrow-right" size={18} /></a>
+    </div>
+  </div>
+</section>
+
+<style>
+  ul[role='list'] {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .home-dest {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  @media (max-width: 1023.98px) {
+    .home-dest {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  .home-free {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 1179.98px) {
+    .home-free {
+      grid-template-columns: 1fr;
+    }
+  }
+  .home-free__card {
+    padding: 24px;
+  }
+  .home-free__card h3 {
+    margin-top: 12px;
+  }
+  .home-free__list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+    display: grid;
+    gap: 4px;
+  }
+  .home-free__list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+  }
+  .home-free__list :global(.icon) {
+    color: var(--burgundy);
+    flex: none;
+  }
+  .home-free__note {
+    font-size: 0.9rem;
+    margin: 0;
+  }
+  .home-guides {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  @media (max-width: 767.98px) {
+    .home-guides {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (min-width: 768px) and (max-width: 1023.98px) {
+    .home-guides {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  .home-journal {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 899.98px) {
+    .home-journal {
+      grid-template-columns: 1fr;
+    }
+  }
+  .home-journal__lead {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    min-height: 360px;
+    color: var(--white);
+    box-shadow: var(--shadow);
+  }
+  .home-journal__lead > :global(.photo) {
+    position: absolute;
+    inset: 0;
+  }
+  .home-journal__shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(20 14 12 / 0.05) 20%, rgb(20 14 12 / 0.75) 100%);
+  }
+  .home-journal__body {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    bottom: 22px;
+  }
+  .home-journal__body h3 {
+    color: var(--white);
+    font-size: var(--step-3);
+    margin: 10px 0 6px;
+  }
+  .home-journal__body h3 a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .home-journal__body h3 a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .home-journal__lead:has(a:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .home-journal__body p {
+    margin: 0;
+    max-width: 50ch;
+  }
+  .home-journal__list {
+    display: grid;
+    gap: 14px;
+  }
+  .home-event {
+    padding: 20px;
+  }
+  .home-plan {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 24px;
+    padding: 24px 28px;
+    background: linear-gradient(100deg, var(--paper), var(--cream-deep));
+  }
+  .home-plan__art {
+    width: 110px;
+    color: var(--burgundy);
+    opacity: 0.6;
+  }
+  .home-plan__title {
+    font-size: var(--step-2);
+    margin-bottom: 4px;
+  }
+  .home-plan p {
+    margin: 0;
+  }
+  @media (max-width: 767.98px) {
+    .home-plan {
+      grid-template-columns: 1fr;
+      text-align: left;
+    }
+    .home-plan__art {
+      display: none;
+    }
+  }
+</style>

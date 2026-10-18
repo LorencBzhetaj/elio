@@ -1,0 +1,83 @@
+---
+/**
+ * Side-by-side comparison of both heroes at phone (390px) and desktop (1440px) widths.
+ * Each frame renders the real page; nothing here is a screenshot.
+ */
+export const prerender = false;
+const frames = [
+  { id: 'a', label: 'Hero A — Editorial collage', src: '/preview/hero-a?embed=1' },
+  { id: 'b', label: 'Hero B — Panorama', src: '/preview/hero-b?embed=1' },
+];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Hero comparison · Design preview</title>
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; font-family: system-ui, sans-serif; background: #ece6da; color: #29221f; }
+      header { padding: 20px 24px 8px; }
+      h1 { margin: 0 0 4px; font-size: 1.4rem; }
+      p { margin: 0 0 12px; color: #5a524a; max-width: 75ch; }
+      .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+      .controls button, .controls a { font: inherit; padding: 8px 14px; border-radius: 999px; border: 1px solid #b9ab92; background: #fff; color: inherit; cursor: pointer; text-decoration: none; min-height: 40px; }
+      .controls button[aria-pressed='true'] { background: #7a1830; color: #fff; border-color: #7a1830; }
+      .row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; padding: 0 24px 32px; }
+      figure { margin: 0; }
+      figcaption { font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; }
+      .viewport { background: #fff; border-radius: 14px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.12); overflow: hidden; position: relative; }
+      .viewport iframe { border: 0; display: block; transform-origin: 0 0; }
+      @media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Homepage hero comparison</h1>
+      <p>Both variants share the same content below the hero. Choose a width, scroll inside each frame, and open a variant full-screen to test it properly. The public site shows only the selected variant.</p>
+      <div class="controls" role="group" aria-label="Viewport width">
+        <button type="button" data-w="390" data-h="844" aria-pressed="true">Phone 390</button>
+        <button type="button" data-w="768" data-h="1024" aria-pressed="false">Tablet 768</button>
+        <button type="button" data-w="1440" data-h="900" aria-pressed="false">Desktop 1440</button>
+        <a href="/preview/hero-a">Open A full-screen</a>
+        <a href="/preview/hero-b">Open B full-screen</a>
+      </div>
+    </header>
+    <div class="row">
+      {frames.map((f) => (
+        <figure>
+          <figcaption>{f.label}<a href={f.src.replace('?embed=1', '')}>Open</a></figcaption>
+          <div class="viewport" data-viewport>
+            <iframe src={f.src} title={`${f.label} preview`} loading="lazy"></iframe>
+          </div>
+        </figure>
+      ))}
+    </div>
+    <script>
+      const buttons = document.querySelectorAll<HTMLButtonElement>('[data-w]');
+      const viewports = document.querySelectorAll<HTMLElement>('[data-viewport]');
+      let w = 390, h = 844;
+      function apply() {
+        viewports.forEach((vp) => {
+          const frame = vp.querySelector('iframe')!;
+          const avail = vp.parentElement!.clientWidth;
+          const scale = Math.min(1, avail / w);
+          frame.style.width = `${w}px`;
+          frame.style.height = `${h}px`;
+          frame.style.transform = `scale(${scale})`;
+          vp.style.width = `${w * scale}px`;
+          vp.style.height = `${h * scale}px`;
+        });
+      }
+      buttons.forEach((b) => b.addEventListener('click', () => {
+        w = Number(b.dataset.w); h = Number(b.dataset.h);
+        buttons.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+        apply();
+      }));
+      addEventListener('resize', apply);
+      apply();
+    </script>
+  </body>
+</html>

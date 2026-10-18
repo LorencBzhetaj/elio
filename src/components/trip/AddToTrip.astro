@@ -1,0 +1,71 @@
+---
+/** "Add to my trip" button. Works without an account; stores to this device's browser storage. */
+import Icon from '../Icon.astro';
+
+interface Props {
+  slug: string;
+  title: string;
+}
+const { slug, title } = Astro.props;
+---
+<div class="add-trip" data-add-trip={slug} data-title={title}>
+  <button class="btn btn--block" type="button" data-add-btn>
+    <Icon name="plus" size={18} /> <span data-label>Add to my trip</span>
+  </button>
+  <p class="add-trip__status" role="status" aria-live="polite" data-status></p>
+  <noscript><p class="muted">The trip planner needs JavaScript enabled.</p></noscript>
+</div>
+
+<script>
+  import { addDestination, findDestination } from '../../features/trip/model';
+  import { loadTrip, saveTrip } from '../../features/trip/storage';
+
+  document.querySelectorAll<HTMLElement>('[data-add-trip]').forEach((root) => {
+    const slug = root.dataset.addTrip!;
+    const title = root.dataset.title!;
+    const btn = root.querySelector<HTMLButtonElement>('[data-add-btn]')!;
+    const label = root.querySelector<HTMLElement>('[data-label]')!;
+    const status = root.querySelector<HTMLElement>('[data-status]')!;
+
+    const render = () => {
+      const { trip, status: s } = loadTrip();
+      if (s === 'unavailable') {
+        btn.disabled = true;
+        status.textContent = 'Your browser is blocking storage, so trips cannot be saved here.';
+        return;
+      }
+      const pos = findDestination(trip, slug);
+      label.textContent = pos ? `Saved to day ${pos.day + 1}` : 'Add to my trip';
+      btn.setAttribute('aria-pressed', String(Boolean(pos)));
+    };
+
+    btn.addEventListener('click', () => {
+      const { trip } = loadTrip();
+      const result = addDestination(trip, slug, 0);
+      if (!result.added) {
+        status.innerHTML = '';
+        status.append(`${title} is already in your trip (day ${result.day + 1}). `);
+      } else if (!saveTrip(result.trip)) {
+        status.textContent = 'Could not save — browser storage is full or blocked.';
+        return;
+      } else {
+        status.innerHTML = '';
+        status.append(`${title} saved to day 1. `);
+      }
+      const a = document.createElement('a');
+      a.href = '/my-trip';
+      a.textContent = 'Edit my trip';
+      status.append(a);
+      render();
+    });
+    render();
+  });
+</script>
+
+<style>
+  .add-trip__status {
+    margin: 8px 0 0;
+    font-size: 0.9rem;
+    min-height: 1.4em;
+  }
+</style>

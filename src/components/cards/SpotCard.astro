@@ -1,0 +1,61 @@
+---
+import Photo from '../media/Photo.astro';
+import Icon from '../Icon.astro';
+import type { Place } from '../../features/content/schemas';
+
+interface Props {
+  place: Place;
+  seed?: number;
+  headingLevel?: 'h2' | 'h3';
+}
+const { place: p, seed = 1, headingLevel: H = 'h3' } = Astro.props;
+---
+<article class="scard">
+  <Photo image={p.cover} ratio="16 / 10" seed={seed} sizes="(max-width: 767px) 100vw, 33vw" hideLabel />
+  <H class="scard__title"><a href={`/photo-spots/${p.slug}`}><Icon name="pin" size={16} />{p.title}</a></H>
+</article>
+
+<style>
+  .scard {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .scard:has(a:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .scard__title {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    margin: 0;
+    font-family: var(--font-ui);
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+  .scard__title a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: var(--white);
+    color: var(--ink);
+    text-decoration: none;
+    box-shadow: var(--shadow-sm);
+  }
+  .scard__title a::after {
+    content: '';
+    position: absolute;
+    inset: -400px;
+  }
+  .scard {
+    contain: paint;
+  }
+  .scard__title a:focus-visible {
+    outline: none;
+  }
+</style>

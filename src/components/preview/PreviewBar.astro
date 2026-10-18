@@ -1,0 +1,53 @@
+---
+/** Staging-only toolbar shown on /preview pages. Lets the client switch heroes and see phone width. */
+interface Props {
+  current: 'a' | 'b';
+}
+const { current } = Astro.props;
+---
+<div class="pbar" role="region" aria-label="Design preview controls">
+  <p class="pbar__title"><strong>Design preview</strong> · {current === 'a' ? 'Hero A — Editorial collage' : 'Hero B — Panorama'}</p>
+  <nav aria-label="Preview variants">
+    <a href="/preview/hero-a" aria-current={current === 'a' ? 'page' : undefined}>Hero A</a>
+    <a href="/preview/hero-b" aria-current={current === 'b' ? 'page' : undefined}>Hero B</a>
+    <a href="/preview">Compare side by side</a>
+  </nav>
+</div>
+
+<style>
+  .pbar {
+    position: relative;
+    z-index: 60;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 8px var(--gutter);
+    background: #1f1a18;
+    color: #fff;
+    font-size: 0.9rem;
+  }
+  .pbar__title {
+    margin: 0;
+  }
+  .pbar nav {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .pbar a {
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgb(255 255 255 / 0.3);
+    text-decoration: none;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .pbar a[aria-current='page'] {
+    background: #fff;
+    color: #1f1a18;
+  }
+</style>

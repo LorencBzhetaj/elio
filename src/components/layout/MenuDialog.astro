@@ -1,0 +1,115 @@
+---
+import Icon from '../Icon.astro';
+import { mainNav, secondaryNav, legalNav } from '../../config/site';
+---
+<dialog id="site-menu" class="menu" aria-label="Site menu">
+  <div class="menu__head">
+    <p class="menu__title">Menu</p>
+    <button class="icon-btn" type="button" data-close-menu aria-label="Close menu">
+      <Icon name="close" />
+    </button>
+  </div>
+  <form class="menu__search" action="/search" method="get" role="search">
+    <label class="visually-hidden" for="menu-q">Search the site</label>
+    <input id="menu-q" class="input" type="search" name="q" placeholder="Search destinations, beaches, towns…" />
+    <button class="btn btn--sm" type="submit">Search</button>
+  </form>
+  <nav aria-label="Menu">
+    <ul class="menu__main">
+      {mainNav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
+    </ul>
+    <ul class="menu__secondary">
+      {secondaryNav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
+    </ul>
+    <ul class="menu__legal">
+      {legalNav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
+    </ul>
+  </nav>
+</dialog>
+
+<script>
+  const dialog = document.getElementById('site-menu') as HTMLDialogElement | null;
+  let opener: HTMLElement | null = null;
+  if (dialog) {
+    document.querySelectorAll<HTMLElement>('[data-open-menu]').forEach((btn) => {
+      btn.setAttribute('aria-expanded', 'false');
+      btn.addEventListener('click', () => {
+        opener = btn;
+        dialog.showModal();
+        btn.setAttribute('aria-expanded', 'true');
+      });
+    });
+    dialog.querySelectorAll('[data-close-menu]').forEach((btn) => btn.addEventListener('click', () => dialog.close()));
+    // Click on the backdrop (outside the panel) closes the menu.
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('close', () => {
+      document.querySelectorAll('[data-open-menu]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+      opener?.focus();
+    });
+  }
+</script>
+
+<style>
+  .menu {
+    margin: 0 0 0 auto;
+    height: 100dvh;
+    max-height: 100dvh;
+    width: min(420px, 100vw);
+    border: 0;
+    padding: 20px var(--gutter) calc(24px + env(safe-area-inset-bottom, 0px));
+    background: var(--cream);
+    color: var(--ink);
+    box-shadow: var(--shadow-lift);
+    overflow-y: auto;
+  }
+  .menu::backdrop {
+    background: rgb(41 34 31 / 0.4);
+  }
+  .menu__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .menu__title {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    color: var(--burgundy-dark);
+    margin: 0;
+  }
+  .menu__search {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .menu ul {
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 0 0 18px;
+    border-bottom: 1px solid var(--sand);
+  }
+  .menu ul:last-child {
+    border-bottom: 0;
+  }
+  .menu a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .menu__main a {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--burgundy-dark);
+  }
+  .menu__legal a {
+    color: var(--muted);
+    font-size: var(--step--1);
+  }
+  .menu a:hover {
+    text-decoration: underline;
+  }
+</style>

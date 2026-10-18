@@ -1,0 +1,93 @@
+---
+import Logo from '../Logo.astro';
+import { mainNav, secondaryNav, legalNav, site } from '../../config/site';
+
+interface Props {
+  brand?: string;
+}
+const { brand = site.brandName } = Astro.props;
+---
+<footer class="site-footer" id="footer">
+  <div class="container site-footer__grid">
+    <div class="site-footer__brand">
+      <Logo brand={brand} />
+      <p class="muted">Free, practical Albania travel information, with optional digital guides for deeper planning.</p>
+      <p class="hand site-footer__hand" aria-hidden="true">Explore Albania differently.</p>
+    </div>
+    <nav aria-label="Explore">
+      <h2 class="site-footer__h">Explore</h2>
+      <ul>{mainNav.map((i) => <li><a href={i.href}>{i.label}</a></li>)}</ul>
+    </nav>
+    <nav aria-label="Your trip">
+      <h2 class="site-footer__h">Your trip</h2>
+      <ul>{secondaryNav.map((i) => <li><a href={i.href}>{i.label}</a></li>)}</ul>
+    </nav>
+    <nav aria-label="Legal">
+      <h2 class="site-footer__h">Legal</h2>
+      <ul>{legalNav.map((i) => <li><a href={i.href}>{i.label}</a></li>)}</ul>
+    </nav>
+  </div>
+  <div class="container site-footer__base">
+    <p>© {new Date().getFullYear()} {brand}. Travel details change — always check with operators before you go.</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    background: var(--cream-deep);
+    border-top: 1px solid var(--sand);
+    margin-top: 40px;
+    padding-top: 48px;
+  }
+  .site-footer__grid {
+    display: grid;
+    grid-template-columns: 2fr repeat(3, 1fr);
+    gap: 32px;
+  }
+  @media (max-width: 900px) {
+    .site-footer__grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .site-footer__brand {
+      grid-column: 1 / -1;
+    }
+  }
+  .site-footer__h {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .site-footer ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .site-footer li a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .site-footer li a:hover {
+    text-decoration: underline;
+  }
+  .site-footer__hand {
+    font-size: 1.6rem;
+    margin: 0;
+  }
+  .site-footer__base {
+    border-top: 1px solid var(--sand);
+    margin-top: 32px;
+    padding-block: 18px 28px;
+    font-size: var(--step--1);
+    color: var(--muted);
+  }
+  .site-footer__base p {
+    margin: 0;
+  }
+</style>

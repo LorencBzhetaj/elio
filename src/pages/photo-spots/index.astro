@@ -1,0 +1,39 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHeader from '../../components/content/PageHeader.astro';
+import SpotCard from '../../components/cards/SpotCard.astro';
+import GuidePromo from '../../components/content/GuidePromo.astro';
+import { loadContent } from '../../features/content/queries';
+
+const content = await loadContent();
+const guide = content.guides.find((g) => g.productSlug === 'photo-spots-map');
+---
+<BaseLayout title="Photo spots" description="Scenic views, beaches and viewpoints across Albania, with access and light notes.">
+  <PageHeader title="The spots worth saving" note="Explore photo spots across Albania" intro="Scenic views, hidden beaches and viewpoints — with access, light and safety notes." />
+  <div class="container section spots-layout" style="padding-top: 8px">
+    <ul class="grid spots-grid" role="list">
+      {content.places.map((p, i) => <li><SpotCard place={p} seed={i + 81} headingLevel="h2" /></li>)}
+    </ul>
+    {guide && <div class="spots-aside"><GuidePromo guide={guide} /></div>}
+  </div>
+</BaseLayout>
+
+<style>
+  .spots-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 899.98px) {
+    .spots-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .spots-grid {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  }
+</style>

@@ -1,0 +1,187 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Icon from '../../components/Icon.astro';
+import { loadOrderForViewer, refreshPendingOrder } from '../../lib/order-access';
+import { getOrderDetail } from '../../features/commerce/orders';
+import { formatMoney } from '../../features/commerce/money';
+import { site } from '../../config/site';
+
+export const prerender = false;
+
+const ref = Astro.params.ref ?? '';
+let loaded = await loadOrderForViewer(ref, Astro.cookies);
+if (loaded && (await refreshPendingOrder(loaded.detail))) {
+  const fresh = (await getOrderDetail(loaded.db, loaded.order.id))!;
+  loaded = { ...loaded, detail: fresh, order: fresh.order };
+}
+// Note: query parameters (e.g. ?cancelled=1) only change wording, never the order state.
+const cancelledReturn = Astro.url.searchParams.has('cancelled');
+const status = loaded?.order.status;
+const canRetry = loaded && ['failed', 'cancelled', 'expired'].includes(status!) ;
+const inFlight = loaded?.detail.attempts.some((a) => ['created', 'creating', 'pending', 'authorized', 'needs_review'].includes(a.status));
+---
+<BaseLayout title="Your order" noindex>
+  <div class="container narrow section ord">
+    {!loaded ? (
+      <>
+        <h1>Order not found</h1>
+        <p class="lead">This order can’t be shown in this browser. For your security, orders are only visible in the browser that placed them or after you sign in with your email.</p>
+        <p><a class="btn" href="/access">Get an access link by email</a></p>
+      </>
+    ) : (
+      <div class="card ord__card" data-order-status={status} data-ref={ref}>
+        {status === 'paid' && (
+          <>
+            <span class="ord__icon ord__icon--ok"><Icon name="check" size={34} /></span>
+            <h1>Your guide is ready.</h1>
+            <p>Thank you! Your payment is confirmed. We’re also emailing an access link to <strong>{loaded.order.buyerEmail}</strong>.</p>
+            {loaded.session ? (
+              <a class="btn" href="/my-guides">Open my guides <Icon name="arrow-right" size={18} /></a>
+            ) : (
+              <form method="post" action={`/api/orders/${ref}/claim`}>
+                <button class="btn" type="submit">Open my guides <Icon name="arrow-right" size={18} /></button>
+              </form>
+            )}
+            <p class="muted ord__small"><Icon name="mail" size={16} /> Didn’t get the email? Check spam, or <a href="/access">request a new link</a>.</p>
+          </>
+        )}
+        {status === 'pending' && (
+          <>
+            <span class="ord__icon"><Icon name="clock" size={34} /></span>
+            <h1>{cancelledReturn ? 'Payment not completed' : 'Confirming your payment…'}</h1>
+            <p id="pending-text">
+              {cancelledReturn
+                ? 'You left the payment page. If you were charged anyway, we’ll detect it and email you. Otherwise nothing has been charged.'
+                : 'We’re waiting for the payment provider to confirm. This usually takes a few seconds. You can keep this page open.'}
+            </p>
+            <p class="muted ord__small" role="status" aria-live="polite" id="poll-status">Checking…</p>
+            <p><button class="btn btn--outline btn--sm" type="button" id="refresh" hidden>Check again</button></p>
+            <p class="muted ord__small">Still pending after a few minutes? Contact <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a> with reference <strong>{ref}</strong>.</p>
+          </>
+        )}
+        {(status === 'failed' || status === 'cancelled' || status === 'expired') && (
+          <>
+            <span class="ord__icon ord__icon--warn"><Icon name="info" size={34} /></span>
+            <h1>{status === 'failed' ? 'Payment failed' : status === 'cancelled' ? 'Payment cancelled' : 'Payment expired'}</h1>
+            <p>No guide was unlocked{status === 'failed' ? ' and the provider reported the payment as unsuccessful' : ''}. You can try again.</p>
+            {canRetry && !inFlight && (
+              <form method="post" action={`/api/orders/${ref}/retry`}>
+                <button class="btn" type="submit">Try payment again</button>
+              </form>
+            )}
+          </>
+        )}
+        {status === 'refunded' && (
+          <>
+            <span class="ord__icon ord__icon--warn"><Icon name="info" size={34} /></span>
+            <h1>Order refunded</h1>
+            <p>This order was refunded, so access to the guide has ended.</p>
+          </>
+        )}
+        <dl class="ord__meta">
+          <div><dt>Reference</dt><dd>{ref}</dd></div>
+          <div><dt>Item</dt><dd>{loaded.detail.items.map((i) => i.titleSnapshot).join(', ')}</dd></div>
+          <div><dt>Total</dt><dd>{formatMoney(loaded.order.totalMinor, loaded.order.currency)}</dd></div>
+        </dl>
+      </div>
+    )}
+  </div>
+</BaseLayout>
+
+<script>
+  // Polls the first-party, authenticated status endpoint with bounded backoff (2, 4, 8, 10 s),
+  // then offers a manual refresh. Redirect query parameters never unlock anything.
+  const card = document.querySelector<HTMLElement>('[data-order-status="pending"]');
+  if (card) {
+    const ref = card.dataset.ref!;
+    const out = document.getElementById('poll-status')!;
+    const btn = document.getElementById('refresh') as HTMLButtonElement;
+    const delays = [2000, 4000, 8000, 10000];
+    let i = 0;
+    const check = async () => {
+      try {
+        const res = await fetch(`/api/orders/${encodeURIComponent(ref)}/status`, { headers: { accept: 'application/json' }, cache: 'no-store' });
+        if (res.ok) {
+          const { status } = await res.json();
+          if (status !== 'pending') {
+            location.replace(`/order/${encodeURIComponent(ref)}`);
+            return;
+          }
+        }
+      } catch {
+        /* network blip: keep waiting */
+      }
+      if (i < delays.length) {
+        out.textContent = 'Still confirming…';
+        setTimeout(check, delays[i++]);
+      } else {
+        out.textContent = 'Not confirmed yet. You can check again, or come back later — we’ll email you once it’s confirmed.';
+        btn.hidden = false;
+      }
+    };
+    btn.addEventListener('click', () => {
+      btn.hidden = true;
+      i = delays.length - 1;
+      out.textContent = 'Checking…';
+      check();
+    });
+    setTimeout(check, delays[i++]);
+  }
+</script>
+
+<style>
+  .ord__card {
+    padding: clamp(22px, 4vw, 40px);
+    text-align: center;
+  }
+  .ord__card h1 {
+    font-size: var(--step-3);
+  }
+  .ord__icon {
+    display: inline-grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--sky);
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+  .ord__icon--ok {
+    background: #d9f2df;
+    color: #1d6b35;
+  }
+  .ord__icon--warn {
+    background: #fff3cd;
+    color: #5b4300;
+  }
+  .ord__small {
+    font-size: 0.9rem;
+    margin-top: 14px;
+  }
+  .ord__small :global(.icon) {
+    display: inline;
+    vertical-align: -3px;
+  }
+  .ord__meta {
+    display: grid;
+    gap: 8px;
+    margin: 24px 0 0;
+    padding-top: 18px;
+    border-top: 1px solid var(--sand);
+    text-align: left;
+  }
+  .ord__meta div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .ord__meta dt {
+    color: var(--muted);
+  }
+  .ord__meta dd {
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+  }
+</style>

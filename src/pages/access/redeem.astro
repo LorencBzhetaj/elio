@@ -1,0 +1,40 @@
+---
+/**
+ * Two-step redemption: GET shows a confirm button (so email link scanners that prefetch URLs cannot
+ * burn the single-use token); POST consumes it atomically, sets the HttpOnly session cookie and
+ * redirects to a clean URL without the token. Referrer-Policy: no-referrer is set by middleware.
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getDb, serverEnv } from '../../features/services';
+import { createSession, redeemAccessToken } from '../../features/access/tokens';
+import { setSessionCookie } from '../../lib/session';
+import { rateLimit } from '../../lib/rate-limit';
+
+export const prerender = false;
+
+if (Astro.request.method === 'POST') {
+  if (!rateLimit(`redeem:${Astro.clientAddress}`, 30, 15 * 60_000)) return Astro.redirect('/access?reason=expired', 303);
+  const form = await Astro.request.formData();
+  const db = await getDb();
+  const redeemed = await redeemAccessToken(db, String(form.get('token') ?? ''));
+  if (!redeemed) return Astro.redirect('/access?reason=expired', 303);
+  const s = await createSession(db, redeemed.email, redeemed.role, serverEnv().SESSION_TTL_DAYS);
+  setSessionCookie(Astro.cookies, s.token, s.expiresAt);
+  return Astro.redirect(redeemed.role === 'admin' ? '/admin/orders' : '/my-guides', 303);
+}
+const token = Astro.url.searchParams.get('token') ?? '';
+---
+<BaseLayout title="Open your guides" noindex>
+  <div class="container narrow section">
+    <h1>Open your guides</h1>
+    {token ? (
+      <form method="post" class="card" style="padding: 24px">
+        <input type="hidden" name="token" value={token} />
+        <p>Continue to sign in on this device. The link works once.</p>
+        <button class="btn" type="submit">Continue</button>
+      </form>
+    ) : (
+      <p>This link is incomplete. <a href="/access">Request a new access link</a>.</p>
+    )}
+  </div>
+</BaseLayout>

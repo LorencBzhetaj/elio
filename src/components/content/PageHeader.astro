@@ -1,0 +1,44 @@
+---
+/** Editorial page header used by index pages: script annotation, serif title, intro. */
+interface Props {
+  title: string;
+  intro?: string;
+  note?: string;
+  crumbs?: { href: string; label: string }[];
+}
+const { title, intro, note, crumbs } = Astro.props;
+---
+<header class="phead">
+  <div class="container">
+    {crumbs && (
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <ol>
+          {crumbs.map((c) => <li><a href={c.href}>{c.label}</a></li>)}
+          <li aria-current="page">{title}</li>
+        </ol>
+      </nav>
+    )}
+    {note && <p class="hand phead__note" aria-hidden="true">{note}</p>}
+    <h1>{title}</h1>
+    {intro && <p class="lead">{intro}</p>}
+    <slot />
+  </div>
+</header>
+
+<style>
+  .phead {
+    padding-block: clamp(28px, 5vw, 56px) clamp(16px, 3vw, 28px);
+    background: radial-gradient(1200px 300px at 85% 0%, rgb(233 169 58 / 0.12), transparent 70%), var(--cream);
+    position: relative;
+  }
+  .phead h1 {
+    font-size: var(--step-4);
+    margin-bottom: 0.2em;
+  }
+  .phead__note {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+    transform: rotate(-2deg);
+    display: inline-block;
+  }
+</style>

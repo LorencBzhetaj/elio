@@ -1,0 +1,87 @@
+---
+/**
+ * DEVELOPMENT-ONLY simulated hosted payment page. Plays the role of the external gateway.
+ * Disabled unless PAYMENT_PROVIDER=mock and not in production. Never collects card data.
+ */
+import { randomUUID } from 'node:crypto';
+import { eq } from 'drizzle-orm';
+import { getDb, getProvider, isLiveMode, serverEnv } from '../../features/services';
+import { mockProviderPayments } from '../../db/schema';
+import { handleCallback } from '../../features/payments/reconcile';
+import { formatMoney } from '../../features/commerce/money';
+import type { PaymentState } from '../../features/payments/contract';
+
+export const prerender = false;
+
+if (serverEnv().PAYMENT_PROVIDER !== 'mock' || isLiveMode()) return new Response('Not found', { status: 404 });
+
+const db = await getDb();
+const ref = Astro.params.ref ?? '';
+const [payment] = await db.select().from(mockProviderPayments).where(eq(mockProviderPayments.providerReference, ref));
+if (!payment) return new Response('Not found', { status: 404 });
+
+if (Astro.request.method === 'POST' && payment.state === 'pending') {
+  const form = await Astro.request.formData();
+  const action = String(form.get('action'));
+  const map: Record<string, { state: PaymentState; callback: boolean; to: 'return' | 'cancel' }> = {
+    pay: { state: 'paid', callback: true, to: 'return' },
+    'pay-late-callback': { state: 'paid', callback: false, to: 'return' },
+    authorize: { state: 'authorized', callback: true, to: 'return' },
+    fail: { state: 'failed', callback: true, to: 'return' },
+    cancel: { state: 'cancelled', callback: true, to: 'cancel' },
+  };
+  const chosen = map[action];
+  if (chosen) {
+    const provider = (await getProvider(db)) as Awaited<ReturnType<typeof getProvider>>;
+    await provider.simulate!(ref, chosen.state);
+    if (chosen.callback) {
+      // Delivered like a real webhook: signed body containing only a reference.
+      const body = JSON.stringify({ reference: ref, eventId: randomUUID() });
+      await handleCallback(db, provider, { rawBody: body, headers: new Headers({ 'x-mock-signature': provider.signCallback!(body) }), query: new URLSearchParams() }, false);
+    }
+    return Astro.redirect(chosen.to === 'cancel' ? payment.cancelUrl : payment.returnUrl, 303);
+  }
+}
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Mock payment provider</title>
+    <style>
+      body { margin: 0; font-family: system-ui, sans-serif; background: #eef1f6; color: #1d2433; }
+      main { max-width: 480px; margin: 40px auto; padding: 0 16px; }
+      .box { background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 8px 30px rgb(0 0 0 / 0.08); }
+      .tag { display: inline-block; background: #ffe7a3; padding: 3px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
+      h1 { font-size: 1.4rem; margin: 12px 0 4px; }
+      .amount { font-size: 2.2rem; font-weight: 800; margin: 8px 0 18px; }
+      button { display: block; width: 100%; min-height: 48px; margin-top: 10px; border-radius: 10px; border: 1px solid #c7cfdc; background: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+      button.primary { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+      p.small { font-size: 0.85rem; color: #4b5568; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="box">
+        <span class="tag">TEST GATEWAY · NO REAL MONEY</span>
+        <h1>Simulated payment</h1>
+        <p class="small">Reference {payment.providerReference}</p>
+        <p class="amount">{formatMoney(payment.amountMinor, payment.currency)}</p>
+        {payment.state === 'pending' ? (
+          <form method="post">
+            <button class="primary" name="action" value="pay">Simulate successful payment</button>
+            <button name="action" value="pay-late-callback">Paid, but callback delayed (return first)</button>
+            <button name="action" value="authorize">Authorised only (not captured)</button>
+            <button name="action" value="fail">Simulate failed payment</button>
+            <button name="action" value="cancel">Cancel and return to shop</button>
+          </form>
+        ) : (
+          <p>This payment is already <strong>{payment.state}</strong>. <a href={payment.returnUrl}>Return to shop</a></p>
+        )}
+        <p class="small">This page stands in for Paysera/POK hosted checkout during development. Real card fields are never collected on the shop’s own site.</p>
+      </div>
+    </main>
+  </body>
+</html>

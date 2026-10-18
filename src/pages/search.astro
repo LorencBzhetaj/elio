@@ -1,0 +1,110 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/content/PageHeader.astro';
+import Icon from '../components/Icon.astro';
+import { loadContent } from '../features/content/queries';
+import { buildSearchIndex, search, type SearchType } from '../features/content/search';
+
+export const prerender = false;
+
+const q = (Astro.url.searchParams.get('q') ?? '').slice(0, 100);
+const types: { id: SearchType; label: string }[] = [
+  { id: 'destination', label: 'Destinations' },
+  { id: 'essential', label: 'Essentials' },
+  { id: 'article', label: 'Journal' },
+  { id: 'place', label: 'Photo spots' },
+  { id: 'event', label: 'Events' },
+  { id: 'guide', label: 'Guides' },
+];
+const type = types.find((t) => t.id === Astro.url.searchParams.get('type'))?.id;
+const content = await loadContent();
+const results = q ? search(buildSearchIndex(content), q, type) : [];
+const label = Object.fromEntries(types.map((t) => [t.id, t.label]));
+const href = (t?: SearchType) => `/search?q=${encodeURIComponent(q)}${t ? `&type=${t}` : ''}`;
+const suggestions = content.destinations.filter((d) => d.featured).slice(0, 4);
+---
+<BaseLayout title={q ? `Search: ${q}` : 'Search'} noindex>
+  <PageHeader title="Search">
+    <form action="/search" method="get" role="search" class="sform">
+      <label for="q" class="visually-hidden">Search destinations, beaches, towns</label>
+      <input id="q" class="input" type="search" name="q" value={q} placeholder="Search destinations, beaches, towns…" autofocus={!q} />
+      {type && <input type="hidden" name="type" value={type} />}
+      <button class="btn" type="submit"><Icon name="search" size={18} /> Search</button>
+    </form>
+  </PageHeader>
+  <div class="container section" style="padding-top: 8px">
+    {q && (
+      <nav aria-label="Filter results">
+        <ul class="filter-pills">
+          <li><a href={href()} aria-current={!type ? 'true' : undefined}>All</a></li>
+          {types.map((t) => <li><a href={href(t.id)} aria-current={type === t.id ? 'true' : undefined}>{t.label}</a></li>)}
+        </ul>
+      </nav>
+    )}
+    {q && <p role="status" class="muted">{results.length} {results.length === 1 ? 'result' : 'results'} for “{q}”</p>}
+    {results.length > 0 && (
+      <ul class="sres" role="list">
+        {results.map((r) => (
+          <li class="card sres__item">
+            <p class="eyebrow">{label[r.type]}</p>
+            <h2 class="sres__title"><a href={r.url}>{r.title}</a></h2>
+            <p class="muted">{r.summary}</p>
+          </li>
+        ))}
+      </ul>
+    )}
+    {q && results.length === 0 && (
+      <div class="notice">
+        <p><strong>No results for “{q}”.</strong> Try a shorter word or a place name. Popular right now:</p>
+        <p>{suggestions.map((d, i) => <>{i > 0 && ' · '}<a href={`/destinations/${d.slug}`}>{d.title}</a></>)}</p>
+      </div>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .sform {
+    display: flex;
+    gap: 10px;
+    max-width: 640px;
+  }
+  @media (max-width: 479.98px) {
+    .sform {
+      flex-direction: column;
+    }
+  }
+  .sres {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0;
+    display: grid;
+    gap: 12px;
+    max-width: 800px;
+  }
+  .sres__item {
+    padding: 16px 20px;
+    position: relative;
+  }
+  .sres__item:has(a:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .sres__title {
+    font-size: var(--step-1);
+    margin: 0 0 4px;
+  }
+  .sres__title a {
+    text-decoration: none;
+  }
+  .sres__title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .sres__title a:focus-visible {
+    outline: none;
+  }
+  .sres__item p:last-child {
+    margin: 0;
+  }
+</style>

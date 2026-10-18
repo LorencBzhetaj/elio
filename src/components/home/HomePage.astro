@@ -1,0 +1,32 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Hero from '../hero/Hero.astro';
+import HomeSections from './HomeSections.astro';
+import { loadContent, getSiteSettings } from '../../features/content/queries';
+import type { HeroVariant } from '../../config/site';
+import type { CatalogPrice } from '../../features/commerce/catalog';
+
+interface Props {
+  variant: HeroVariant;
+  noindex?: boolean;
+  prices: Map<string, CatalogPrice> | null;
+}
+const { variant, noindex = false, prices } = Astro.props;
+const content = await loadContent();
+const { brandName, tagline, settings } = await getSiteSettings();
+const heroData = variant === 'collage' ? settings.heroCollage : settings.heroPanorama;
+---
+<BaseLayout title={brandName} noindex={noindex} headerOverlay={variant === 'panorama'} brand={brandName}>
+  <slot name="top" slot="top" />
+  <Hero
+    variant={variant}
+    heading={heroData.heading}
+    description={heroData.description}
+    media={heroData.media}
+    tagline={tagline}
+    brand={brandName}
+    primaryAction={{ href: '/destinations', label: variant === 'collage' ? 'Explore for free' : 'Explore Albania' }}
+    secondaryAction={{ href: '/guides', label: variant === 'collage' ? 'Shop digital guides' : 'Shop guides' }}
+  />
+  <HomeSections content={content} prices={prices} />
+</BaseLayout>

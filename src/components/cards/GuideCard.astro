@@ -1,0 +1,115 @@
+---
+import Photo from '../media/Photo.astro';
+import Icon from '../Icon.astro';
+import type { GuideMarketing } from '../../features/content/schemas';
+import { formatMoney } from '../../features/commerce/money';
+
+interface Props {
+  guide: GuideMarketing;
+  /** Authoritative price from the commerce DB; omitted on prerendered pages. */
+  price?: { amountMinor: number; currency: string } | null;
+  seed?: number;
+  headingLevel?: 'h2' | 'h3';
+}
+const { guide: g, price, seed = 1, headingLevel: H = 'h3' } = Astro.props;
+---
+<article class="gcard card">
+  <div class="gcard__media">
+    <Photo image={g.cover} ratio="4 / 3" seed={seed} sizes="(max-width: 767px) 100vw, 33vw" hideLabel />
+    {price && <span class="gcard__price">{formatMoney(price.amountMinor, price.currency)}</span>}
+  </div>
+  <div class="gcard__body">
+    <H class="gcard__title"><a href={`/guides/${g.slug}`}>{g.title}</a></H>
+    <p class="gcard__sub">{g.subtitle}</p>
+    <ul class="gcard__list">
+      {g.contents.slice(0, 4).map((c) => <li><Icon name="check" size={16} />{c.title}</li>)}
+    </ul>
+    <p class="gcard__meta">
+      {g.availability === 'in-production' ? 'In production · preview available' : 'One-time purchase · no account needed'}
+    </p>
+    <span class="btn btn--sm btn--outline gcard__cta" aria-hidden="true">View guide <Icon name="arrow-right" size={16} /></span>
+  </div>
+</article>
+
+<style>
+  .gcard {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .gcard:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+  }
+  .gcard:has(a:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .gcard__media {
+    position: relative;
+  }
+  .gcard__price {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--sun);
+    color: var(--ink);
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 999px;
+    box-shadow: var(--shadow-sm);
+  }
+  .gcard__body {
+    padding: 18px 18px 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  .gcard__title {
+    margin: 0;
+  }
+  .gcard__title a {
+    color: var(--burgundy-dark);
+    text-decoration: none;
+  }
+  .gcard__title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .gcard__title a:focus-visible {
+    outline: none;
+  }
+  .gcard__sub {
+    color: var(--muted);
+    margin: 4px 0 12px;
+    font-size: 0.95rem;
+  }
+  .gcard__list {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+    font-size: 0.92rem;
+  }
+  .gcard__list li {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .gcard__list :global(.icon) {
+    color: var(--burgundy);
+    flex: none;
+  }
+  .gcard__meta {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin: auto 0 12px;
+  }
+  .gcard__cta {
+    align-self: flex-start;
+  }
+</style>

@@ -1,0 +1,13 @@
+---
+/** Hero B (panorama) preview — deterministic, noindex, protected by middleware. */
+import HomePage from '../../components/home/HomePage.astro';
+import PreviewBar from '../../components/preview/PreviewBar.astro';
+import { loadDisplayPrices } from '../../lib/prices';
+
+export const prerender = false;
+const prices = await loadDisplayPrices();
+const embedded = Astro.url.searchParams.has('embed');
+---
+<HomePage variant="panorama" noindex prices={prices}>
+  {!embedded && <PreviewBar current="b" slot="top" />}
+</HomePage>

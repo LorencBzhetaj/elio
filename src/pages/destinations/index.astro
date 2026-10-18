@@ -1,0 +1,72 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHeader from '../../components/content/PageHeader.astro';
+import DestinationCard from '../../components/cards/DestinationCard.astro';
+import { loadContent } from '../../features/content/queries';
+import { regions, destinationTypes } from '../../features/content/schemas';
+
+// Rendered on request so query-string filters work without client JS.
+export const prerender = false;
+
+const content = await loadContent();
+const region = Astro.url.searchParams.get('region');
+const type = Astro.url.searchParams.get('type');
+const validRegion = regions.find((r) => r === region);
+const validType = destinationTypes.find((t) => t === type);
+
+const results = content.destinations.filter(
+  (d) => (!validRegion || d.region === validRegion) && (!validType || d.types.includes(validType)),
+);
+
+const typeLabels: Record<string, string> = { mountains: 'Mountains', coast: 'Coast', 'historic-town': 'Historic towns', city: 'Cities', lake: 'Lakes', nature: 'Nature' };
+const regionLabels: Record<string, string> = { north: 'North', central: 'Central', south: 'South', coast: 'Coast' };
+const link = (params: Record<string, string | undefined>) => {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v) sp.set(k, v);
+  const q = sp.toString();
+  return `/destinations${q ? `?${q}` : ''}`;
+};
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+---
+<BaseLayout title="Destinations" description="Mountains, coast, historic towns and cities across Albania — free destination pages.">
+  <PageHeader title="Find your Albania" note="Mountains · Riviera · Cities" intro="Mountains, coastline, historic towns and cities — practical, free destination pages." />
+  <section class="container section" style="padding-top: 8px" aria-label="Destinations">
+    <nav aria-label="Filter by type">
+      <ul class="filter-pills">
+        <li><a href={link({ region: validRegion })} aria-current={!validType ? 'true' : undefined}>All types</a></li>
+        {destinationTypes.map((t) => <li><a href={link({ region: validRegion, type: t })} aria-current={validType === t ? 'true' : undefined}>{typeLabels[t]}</a></li>)}
+      </ul>
+    </nav>
+    <nav aria-label="Filter by region">
+      <ul class="filter-pills">
+        <li><a href={link({ type: validType })} aria-current={!validRegion ? 'true' : undefined}>All regions</a></li>
+        {regions.map((r) => <li><a href={link({ region: r, type: validType })} aria-current={validRegion === r ? 'true' : undefined}>{regionLabels[r]}</a></li>)}
+      </ul>
+    </nav>
+    <p class="muted" role="status">{results.length} {results.length === 1 ? 'destination' : 'destinations'}</p>
+    {results.length > 0 ? (
+      <ul class="grid dest-grid" role="list">
+        {results.map((d, i) => <li><DestinationCard destination={d} seed={i + 51} headingLevel="h2" /></li>)}
+      </ul>
+    ) : (
+      <div class="notice">
+        <p><strong>No destinations match these filters yet.</strong></p>
+        <p><a href="/destinations">Show all destinations</a> or <a href="/search">search the site</a>.</p>
+      </div>
+    )}
+  </section>
+</BaseLayout>
+
+<style>
+  .dest-grid {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  }
+  @media (max-width: 539.98px) {
+    .dest-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

@@ -1,0 +1,30 @@
+---
+import { formatUpdated } from '../../features/content/queries';
+import Icon from '../Icon.astro';
+
+interface Props {
+  verified: boolean;
+  updatedAt: string;
+}
+const { verified, updatedAt } = Astro.props;
+---
+<p class="vnote">
+  <span><Icon name="clock" size={16} /> Updated {formatUpdated(updatedAt)}</span>
+  {!verified && <span class="chip chip--draft">Draft · facts to verify</span>}
+</p>
+
+<style>
+  .vnote {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    align-items: center;
+    color: var(--muted);
+    font-size: var(--step--1);
+  }
+  .vnote > span:first-child {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+</style>

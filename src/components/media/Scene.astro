@@ -1,0 +1,214 @@
+---
+/**
+ * Original vector illustration used as a clearly-labelled stand-in until licensed photography
+ * is supplied. Deterministic (seeded) so builds are reproducible. Not a representation of a
+ * specific real view.
+ */
+export type SceneKind = 'coast' | 'mountains' | 'town' | 'lake' | 'city' | 'beach' | 'sunset' | 'food';
+
+interface Props {
+  kind: SceneKind;
+  seed?: number;
+  /** SVG preserveAspectRatio alignment, used to honour per-breakpoint focal points. */
+  align?: string;
+  class?: string;
+}
+const { kind, seed = 1, align = 'xMidYMid', class: className } = Astro.props;
+
+let s = (seed * 9301 + 49297) % 233280;
+const rnd = () => {
+  s = (s * 9301 + 49297) % 233280;
+  return s / 233280;
+};
+const uid = `sc${kind}${seed}${Math.floor(rnd() * 1e6)}`;
+
+const warm = kind === 'sunset';
+const sky = warm ? ['#f4a37a', '#f9d6a6', '#fbe8c8'] : ['#8fc4e8', '#cfe6f2', '#fbeedb'];
+const farMtn = warm ? '#b88a9a' : '#9fb0cc';
+const midMtn = warm ? '#8b5f73' : '#6f86a6';
+
+type House = { x: number; y: number; w: number; h: number; roof: string };
+function cluster(cx: number, cy: number, spread: number, count: number, slope = 0): House[] {
+  const out: House[] = [];
+  for (let i = 0; i < count; i++) {
+    const x = cx + (rnd() - 0.5) * spread;
+    const y = cy + (rnd() - 0.5) * spread * 0.35 + (x - cx) * slope;
+    const w = 26 + rnd() * 26;
+    out.push({ x, y, w, h: w * (0.7 + rnd() * 0.4), roof: rnd() > 0.25 ? '#c4553b' : '#a8432f' });
+  }
+  return out.sort((a, b) => a.y - b.y);
+}
+function pines(x0: number, x1: number, yBase: number, count: number, scale = 1) {
+  const out: { x: number; y: number; h: number }[] = [];
+  for (let i = 0; i < count; i++) {
+    out.push({ x: x0 + rnd() * (x1 - x0), y: yBase + rnd() * 40, h: (50 + rnd() * 60) * scale });
+  }
+  return out.sort((a, b) => a.y - b.y);
+}
+
+const houses =
+  kind === 'coast' ? cluster(900, 520, 380, 34, -0.12)
+  : kind === 'town' ? cluster(620, 470, 900, 70, 0.05)
+  : kind === 'sunset' ? cluster(780, 560, 600, 30, -0.05)
+  : [];
+const trees =
+  kind === 'mountains' || kind === 'lake' ? pines(0, 1200, 560, 38, 1.1)
+  : kind === 'coast' ? pines(560, 1200, 600, 14, 0.7)
+  : kind === 'town' ? pines(0, 1200, 640, 18, 0.8)
+  : [];
+const umbrellas = kind === 'beach' ? Array.from({ length: 16 }, (_, i) => ({ x: 120 + i * 62 + rnd() * 30, y: 600 + rnd() * 120, c: rnd() > 0.5 ? '#f2c14e' : '#e9e2d0' })) : [];
+const blocks = kind === 'city' ? Array.from({ length: 16 }, (_, i) => ({ x: i * 78 - 10, w: 70 + rnd() * 20, h: 180 + rnd() * 260, c: ['#e8b04b', '#d86f5a', '#7fb3a6', '#e9d5b5', '#c98fb0', '#8fa9d6'][Math.floor(rnd() * 6)] })) : [];
+---
+<svg
+  class:list={['scene', className]}
+  viewBox="0 0 1200 800"
+  preserveAspectRatio={`${align} slice`}
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+  focusable="false"
+>
+  <defs>
+    <linearGradient id={`${uid}sky`} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color={sky[0]} />
+      <stop offset="0.55" stop-color={sky[1]} />
+      <stop offset="1" stop-color={sky[2]} />
+    </linearGradient>
+    <linearGradient id={`${uid}sea`} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color={warm ? '#e09a7f' : '#5cc6d0'} />
+      <stop offset="0.5" stop-color={warm ? '#7c6a8f' : '#1fa3b8'} />
+      <stop offset="1" stop-color={warm ? '#3e4d72' : '#0c7491'} />
+    </linearGradient>
+    <linearGradient id={`${uid}lake`} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7fd6d0" />
+      <stop offset="1" stop-color="#138a8f" />
+    </linearGradient>
+    <linearGradient id={`${uid}haze`} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.35" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="800" fill={`url(#${uid}sky)`} />
+  <circle cx={warm ? 820 : 960} cy={warm ? 470 : 150} r={warm ? 90 : 60} fill={warm ? '#ffd27a' : '#fff4d6'} opacity="0.9" />
+
+  {kind !== 'city' && kind !== 'food' && (
+    <>
+      <path d="M0 470 L120 360 L230 420 L360 300 L470 390 L600 280 L720 380 L850 290 L980 370 L1100 310 L1200 360 L1200 520 L0 520Z" fill={farMtn} opacity="0.75" />
+      <path d="M0 520 L150 400 L260 470 L400 360 L540 470 L700 380 L840 470 L1000 400 L1200 480 L1200 560 L0 560Z" fill={midMtn} opacity="0.85" />
+      <rect y="380" width="1200" height="200" fill={`url(#${uid}haze)`} />
+    </>
+  )}
+
+  {kind === 'mountains' && (
+    <>
+      <path d="M-20 600 L260 200 L380 330 L520 150 L700 420 L820 260 L1000 470 L1220 330 L1220 800 L-20 800Z" fill="#5b6f86" />
+      <path d="M260 200 L300 255 L270 250 L245 280 L225 250Z M520 150 L570 225 L540 215 L515 245 L490 215Z M820 260 L860 315 L830 310 L805 330Z" fill="#f6f4ef" />
+      <path d="M-20 640 C200 560 380 620 600 590 C820 560 1000 620 1220 580 L1220 800 L-20 800Z" fill="#6e9a4c" />
+      <path d="M-20 700 C240 650 520 720 760 680 C960 650 1100 690 1220 670 L1220 800 L-20 800Z" fill="#557f39" />
+      <g transform="translate(640 560)">
+        <rect x="0" y="0" width="70" height="56" fill="#efe6d6" />
+        <path d="M-6 2 L35 -26 L76 2Z" fill="#7a5640" />
+        <rect x="52" y="-58" width="18" height="60" fill="#e6dccb" />
+        <path d="M48 -56 L61 -86 L74 -56Z" fill="#7a5640" />
+        <rect x="28" y="30" width="14" height="26" fill="#6b4b36" />
+      </g>
+    </>
+  )}
+
+  {kind === 'lake' && (
+    <>
+      <path d="M-20 560 L200 260 L360 420 L520 230 L700 470 L880 300 L1060 450 L1220 340 L1220 600 L-20 600Z" fill="#4f6a7f" />
+      <rect y="560" width="1200" height="240" fill={`url(#${uid}lake)`} />
+      <path d="M-20 560 L200 760 L360 640 L520 800 L700 600 L880 760 L1060 640 L1220 720 L1220 560Z" fill="#2b6f78" opacity="0.35" />
+      <path d="M-20 560 C200 545 500 575 760 556 C980 540 1100 560 1220 552 L1220 575 L-20 575Z" fill="#6e9a4c" opacity="0.9" />
+    </>
+  )}
+
+  {(kind === 'coast' || kind === 'sunset') && (
+    <>
+      <rect y="500" width="1200" height="300" fill={`url(#${uid}sea)`} />
+      <path d="M560 800 C620 640 700 560 820 520 C930 480 1060 470 1220 440 L1220 800Z" fill={warm ? '#6b5a4f' : '#6d8a45'} />
+      <path d="M600 800 C680 680 760 620 880 600 C990 580 1100 590 1220 560 L1220 800Z" fill={warm ? '#574639' : '#58753a'} />
+      <path d="M180 560 C230 530 300 528 360 555 C320 575 230 580 180 560Z" fill={warm ? '#4f4038' : '#6d8a45'} />
+      <g opacity="0.85">
+        <path d="M120 680 l40 0 l-8 10 l-26 0z" fill="#ffffff" />
+        <path d="M300 620 l30 0 l-6 8 l-20 0z" fill="#ffffff" />
+      </g>
+    </>
+  )}
+
+  {kind === 'beach' && (
+    <>
+      <rect y="420" width="1200" height="380" fill={`url(#${uid}sea)`} />
+      <path d="M-20 800 L-20 560 C220 600 420 560 640 620 C860 680 1040 640 1220 600 L1220 800Z" fill="#f3e3c3" />
+      <path d="M-20 560 C220 600 420 560 640 620 C860 680 1040 640 1220 600" fill="none" stroke="#ffffff" stroke-width="10" opacity="0.7" />
+      <path d="M760 430 C840 380 960 380 1040 430 C980 450 840 455 760 430Z" fill="#5f7f3d" />
+    </>
+  )}
+
+  {kind === 'town' && (
+    <>
+      <path d="M-20 800 L-20 520 C200 420 420 380 640 360 C860 380 1000 430 1220 500 L1220 800Z" fill="#8a9a5b" />
+      <path d="M420 368 L460 330 L780 330 L820 368Z" fill="#b8a487" />
+      <rect x="440" y="300" width="360" height="40" fill="#a89478" />
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => <rect x={444 + i * 40} y="288" width="20" height="16" fill="#a89478" />)}
+    </>
+  )}
+
+  {kind === 'city' && (
+    <>
+      {blocks.map((b) => (
+        <g>
+          <rect x={b.x} y={800 - b.h} width={b.w} height={b.h} fill={b.c} />
+          {Array.from({ length: Math.floor(b.h / 46) }, (_, r) =>
+            [0, 1, 2].map((c) => <rect x={b.x + 10 + c * 20} y={800 - b.h + 16 + r * 46} width="12" height="22" fill="#ffffff" opacity="0.55" />),
+          )}
+        </g>
+      ))}
+      <rect y="760" width="1200" height="40" fill="#7a6a5a" />
+    </>
+  )}
+
+  {kind === 'food' && (
+    <>
+      <rect width="1200" height="800" fill="#c98a5a" />
+      <rect y="380" width="1200" height="420" fill="#9b6340" />
+      {[[300, 520, 150, '#f3ead7'], [620, 470, 170, '#f7f0e2'], [920, 560, 140, '#efe3cc'], [460, 690, 120, '#f3ead7'], [800, 720, 110, '#f7f0e2']].map(([x, y, r, c]) => (
+        <g>
+          <circle cx={x} cy={y} r={r} fill={c as string} />
+          <circle cx={x} cy={y} r={(r as number) * 0.68} fill={['#d9633f', '#86a54a', '#e8b84a'][Math.floor(rnd() * 3)]} opacity="0.85" />
+        </g>
+      ))}
+    </>
+  )}
+
+  {houses.map((h) => (
+    <g>
+      <rect x={h.x} y={h.y} width={h.w} height={h.h} fill="#f3e8d6" />
+      <path d={`M${h.x - 3} ${h.y + 2} L${h.x + h.w / 2} ${h.y - h.h * 0.38} L${h.x + h.w + 3} ${h.y + 2}Z`} fill={h.roof} />
+      <rect x={h.x + h.w * 0.3} y={h.y + h.h * 0.35} width={h.w * 0.16} height={h.h * 0.22} fill="#6c5a4a" opacity="0.7" />
+      <rect x={h.x + h.w * 0.6} y={h.y + h.h * 0.35} width={h.w * 0.16} height={h.h * 0.22} fill="#6c5a4a" opacity="0.7" />
+    </g>
+  ))}
+
+  {umbrellas.map((u) => (
+    <g>
+      <rect x={u.x + 21} y={u.y} width="3" height="34" fill="#7a6a5a" />
+      <path d={`M${u.x} ${u.y + 4} Q${u.x + 22} ${u.y - 22} ${u.x + 45} ${u.y + 4}Z`} fill={u.c} />
+    </g>
+  ))}
+
+  {trees.map((t) => (
+    <g>
+      <rect x={t.x - 3} y={t.y - 4} width="6" height="14" fill="#5a4330" />
+      <path d={`M${t.x} ${t.y - t.h} L${t.x + t.h * 0.28} ${t.y} L${t.x - t.h * 0.28} ${t.y}Z`} fill="#2f5a34" />
+    </g>
+  ))}
+</svg>
+
+<style>
+  .scene {
+    width: 100%;
+    height: 100%;
+  }
+</style>

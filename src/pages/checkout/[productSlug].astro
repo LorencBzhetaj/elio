@@ -1,0 +1,198 @@
+---
+import { randomUUID } from 'node:crypto';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Photo from '../../components/media/Photo.astro';
+import Icon from '../../components/Icon.astro';
+import { findBySlug } from '../../features/content/queries';
+import { getDb, getProvider, serverEnv } from '../../features/services';
+import { getActiveProductBySlug } from '../../features/commerce/catalog';
+import { createOrder, startCheckout, viewerCookieName } from '../../features/commerce/orders';
+import { CommerceError } from '../../features/commerce/errors';
+import { formatMoney } from '../../features/commerce/money';
+import { isLiveMode } from '../../config/env';
+import { secureCookies } from '../../lib/session';
+
+export const prerender = false;
+
+const slug = Astro.params.productSlug ?? '';
+const db = await getDb();
+const product = await getActiveProductBySlug(db, slug);
+const guide = await findBySlug('guides', slug);
+const env = serverEnv();
+
+const messages: Record<string, string> = {
+  invalid_email: 'Please enter a valid email address.',
+  terms_required: 'Please accept the terms of sale to continue.',
+  product_unavailable: 'This guide is not available for purchase right now.',
+  idempotency_conflict: 'This form was already used for a different order. Please reload the page and try again.',
+  provider_unavailable: 'The payment page could not be opened. You have not been charged. Please try again in a moment.',
+  checkout_in_progress: 'A payment for this order is already in progress.',
+};
+
+let error: string | null = null;
+let email = '';
+let marketing = false;
+
+if (Astro.request.method === 'POST' && product) {
+  const form = await Astro.request.formData();
+  email = String(form.get('email') ?? '').slice(0, 254);
+  marketing = form.get('marketing') === 'on';
+  try {
+    const provider = await getProvider(db);
+    const order = await createOrder(
+      db,
+      {
+        productSlug: slug,
+        email,
+        idempotencyKey: String(form.get('idempotencyKey') ?? ''),
+        termsAccepted: form.get('terms') === 'on',
+        marketingOptIn: marketing,
+      },
+      { provider: provider.id, livemode: isLiveMode() },
+    );
+    if (order.viewerSecret) {
+      Astro.cookies.set(viewerCookieName(order.publicReference), order.viewerSecret, {
+        httpOnly: true,
+        secure: secureCookies(),
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
+    const { checkoutUrl } = await startCheckout(db, provider, order.attemptId, { siteUrl: env.SITE_URL });
+    return Astro.redirect(checkoutUrl, 303);
+  } catch (err) {
+    if (err instanceof CommerceError) error = messages[err.code] ?? 'Something went wrong. You have not been charged.';
+    else {
+      console.error('[checkout] unexpected error', (err as Error).message);
+      error = 'Something went wrong. You have not been charged. Please try again.';
+    }
+  }
+}
+const idempotencyKey = randomUUID();
+---
+<BaseLayout title="Secure checkout" noindex>
+  <div class="container section co">
+    {!product || !guide ? (
+      <div class="narrow">
+        <h1>Not available</h1>
+        <p class="lead">This guide can’t be purchased right now.</p>
+        <p><a href="/guides">Browse guides</a></p>
+      </div>
+    ) : (
+      <div class="co__grid">
+        <div>
+          <p class="eyebrow">Checkout</p>
+          <h1>Secure checkout</h1>
+          <p class="muted">Get your guide in minutes. No account required.</p>
+          {env.PAYMENT_PROVIDER === 'mock' && (
+            <div class="notice notice--warn"><p><strong>Test mode.</strong> Payments are simulated. No real card is charged and no payment details are requested.</p></div>
+          )}
+          {error && <div class="notice co__error" role="alert" tabindex="-1" id="co-error"><p>{error}</p></div>}
+          <form method="post" class="card co__form" novalidate={false}>
+            <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+            <div class="field">
+              <label for="email">Email address</label>
+              <input class="input" id="email" name="email" type="email" required autocomplete="email" inputmode="email" value={email} aria-describedby="email-hint" />
+              <span class="hint" id="email-hint">We send your access link and receipt here. This is how you get back to your guide — no password needed.</span>
+            </div>
+            <label class="check field">
+              <input type="checkbox" name="terms" required />
+              <span>I accept the <a href="/terms" target="_blank">terms of sale<span class="visually-hidden"> (opens in a new tab)</span></a> and <a href="/refund-policy" target="_blank">refund policy<span class="visually-hidden"> (opens in a new tab)</span></a>, and understand the guide is digital content delivered immediately after payment is confirmed.</span>
+            </label>
+            <label class="check field">
+              <input type="checkbox" name="marketing" checked={marketing} />
+              <span>Optional: email me occasional travel tips. (Not required to buy.)</span>
+            </label>
+            <button class="btn btn--block" type="submit"><Icon name="lock" size={18} /> Continue to payment · {formatMoney(product.priceMinor, product.currency)}</button>
+            <p class="muted co__small">You’ll pay on the payment provider’s secure page. This site never sees or stores your card details.</p>
+          </form>
+        </div>
+        <aside class="card co__summary" aria-labelledby="sum-h">
+          <h2 id="sum-h" class="co__sumh">Order summary</h2>
+          <div class="co__item">
+            <div class="co__thumb"><Photo image={guide.cover} ratio="3 / 4" hideLabel seed={141} /></div>
+            <div>
+              <p class="co__title">{product.title}</p>
+              <p class="muted">{guide.format}</p>
+            </div>
+          </div>
+          <dl class="co__total">
+            <dt>Total</dt>
+            <dd>{formatMoney(product.priceMinor, product.currency)}</dd>
+          </dl>
+          {product.isTestProduct && <p class="muted co__small">Test price for development. Final price and currency are not yet confirmed.</p>}
+          <p class="muted co__small"><a href={`/guides/${guide.slug}`}>Back to guide details</a></p>
+        </aside>
+      </div>
+    )}
+  </div>
+  {error && <script is:inline>document.getElementById('co-error')?.focus();</script>}
+</BaseLayout>
+
+<style>
+  .co__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+  @media (max-width: 859.98px) {
+    .co__grid {
+      grid-template-columns: 1fr;
+    }
+    .co__summary {
+      order: -1;
+    }
+  }
+  .co h1 {
+    font-size: var(--step-4);
+  }
+  .co__form {
+    padding: clamp(18px, 3vw, 28px);
+    margin-top: 16px;
+  }
+  .co__error {
+    margin-top: 16px;
+    border-left-color: #b3261e;
+  }
+  .co__small {
+    font-size: 0.86rem;
+    margin: 12px 0 0;
+  }
+  .co__summary {
+    padding: 22px;
+  }
+  .co__sumh {
+    font-size: var(--step-1);
+  }
+  .co__item {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 14px;
+    align-items: center;
+  }
+  .co__thumb {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .co__title {
+    font-weight: 700;
+    margin: 0;
+  }
+  .co__item p {
+    margin: 0;
+  }
+  .co__total {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--sand);
+    margin: 18px 0 0;
+    padding-top: 14px;
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+  .co__total dd {
+    margin: 0;
+  }
+</style>

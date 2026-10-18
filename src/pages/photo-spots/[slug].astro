@@ -1,0 +1,97 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Photo from '../../components/media/Photo.astro';
+import Icon from '../../components/Icon.astro';
+import Blocks from '../../components/content/Blocks.astro';
+import VerifyNote from '../../components/content/VerifyNote.astro';
+import GuidePromo from '../../components/content/GuidePromo.astro';
+import { loadContent } from '../../features/content/queries';
+import type { Place } from '../../features/content/schemas';
+
+export async function getStaticPaths() {
+  const c = await loadContent();
+  return c.places.map((p) => ({ params: { slug: p.slug }, props: { p } }));
+}
+interface Props {
+  p: Place;
+}
+const { p } = Astro.props;
+const content = await loadContent();
+const guide = content.guides.find((g) => g.productSlug === p.relatedGuideProductId);
+const dest = content.destinations.find((d) => d.slug === p.destinationSlug);
+---
+<BaseLayout title={p.title} description={p.seoDescription ?? p.summary} canonical={p.canonical}>
+  <div class="container spot section">
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <ol><li><a href="/photo-spots">Photo spots</a></li><li aria-current="page">{p.title}</li></ol>
+    </nav>
+    <div class="spot__grid">
+      <div class="spot__media"><Photo image={p.cover} ratio="4 / 3" priority sizes="(max-width: 899px) 100vw, 60vw" /></div>
+      <div>
+        <p class="eyebrow">{p.kind.replace('-', ' ')}</p>
+        <h1>{p.title}</h1>
+        <p class="lead">{p.summary}</p>
+        <VerifyNote verified={p.verified} updatedAt={p.updatedAt} />
+        <dl class="spot__facts">
+          {p.light && <div><dt><Icon name="sun" size={18} /> Light</dt><dd>{p.light}</dd></div>}
+          {p.permissions && <div><dt><Icon name="info" size={18} /> Permissions</dt><dd>{p.permissions}</dd></div>}
+          {p.safety && <div><dt><Icon name="info" size={18} /> Safety</dt><dd>{p.safety}</dd></div>}
+          <div>
+            <dt><Icon name="pin" size={18} /> Coordinates</dt>
+            <dd>{p.coordinates ? `${p.coordinates.lat.toFixed(5)}, ${p.coordinates.lng.toFixed(5)}` : 'To be added after on-site verification.'}</dd>
+          </div>
+          {dest && <div><dt><Icon name="map" size={18} /> Destination</dt><dd><a href={`/destinations/${dest.slug}`}>{dest.title}</a></dd></div>}
+        </dl>
+      </div>
+    </div>
+    <section class="prose spot__access" aria-labelledby="access-h">
+      <h2 id="access-h">Getting there</h2>
+      <Blocks blocks={p.access} />
+    </section>
+    {guide && <div class="spot__promo"><GuidePromo guide={guide} /></div>}
+  </div>
+</BaseLayout>
+
+<style>
+  .spot__grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  @media (max-width: 899.98px) {
+    .spot__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .spot__media {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .spot h1 {
+    font-size: var(--step-4);
+  }
+  .spot__facts {
+    display: grid;
+    gap: 12px;
+    margin: 16px 0 0;
+  }
+  .spot__facts dt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+  }
+  .spot__facts dd {
+    margin: 2px 0 0 24px;
+    color: var(--muted);
+  }
+  .spot__access {
+    margin-top: 32px;
+  }
+  .spot__promo {
+    margin-top: 28px;
+    max-width: 640px;
+  }
+</style>

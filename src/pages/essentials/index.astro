@@ -1,0 +1,67 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHeader from '../../components/content/PageHeader.astro';
+import Icon from '../../components/Icon.astro';
+import { loadContent } from '../../features/content/queries';
+
+const { essentials } = await loadContent();
+---
+<BaseLayout title="Travel essentials" description="Transport, money, connectivity and seasons — practical information for travelling in Albania.">
+  <PageHeader title="Travel essentials" note="Know before you go." intro="Transport, money, connectivity and seasons. Practical and free." />
+  <div class="container section" style="padding-top: 8px">
+    <ul class="grid ess-grid" role="list">
+      {essentials.map((e) => (
+        <li class="card ess-card">
+          <span class="ess-card__icon"><Icon name={e.icon} size={26} /></span>
+          <h2 class="ess-card__title"><a href={`/essentials/${e.slug}`}>{e.title}</a></h2>
+          <p class="muted">{e.summary}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</BaseLayout>
+
+<style>
+  .ess-grid {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  }
+  .ess-card {
+    position: relative;
+    padding: 22px;
+  }
+  .ess-card:has(a:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .ess-card__icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--burgundy-tint);
+    color: var(--burgundy);
+    margin-bottom: 12px;
+  }
+  .ess-card__title {
+    font-size: var(--step-1);
+  }
+  .ess-card__title a {
+    color: var(--burgundy-dark);
+    text-decoration: none;
+  }
+  .ess-card__title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .ess-card__title a:focus-visible {
+    outline: none;
+  }
+  .ess-card p {
+    margin: 0;
+  }
+</style>

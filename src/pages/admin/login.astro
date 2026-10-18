@@ -1,0 +1,33 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { adminEmails, getDb } from '../../features/services';
+import { requestAccessLink } from '../../features/access/tokens';
+import { rateLimit } from '../../lib/rate-limit';
+
+export const prerender = false;
+
+let sent = false;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (rateLimit(`admin-login:${Astro.clientAddress}`, 5, 15 * 60_000)) {
+    await requestAccessLink(await getDb(), String(form.get('email') ?? ''), { role: 'admin', adminEmails: adminEmails() });
+  }
+  sent = true; // generic
+}
+---
+<AdminLayout title="Sign in">
+  <div class="narrow">
+    <h1>Admin sign-in</h1>
+    {sent ? (
+      <p>If this address is an authorised admin, a single-use sign-in link has been emailed.</p>
+    ) : (
+      <form method="post" class="card" style="padding: 22px">
+        <div class="field">
+          <label for="email">Admin email</label>
+          <input class="input" id="email" name="email" type="email" required autocomplete="email" />
+        </div>
+        <button class="btn" type="submit">Email me a sign-in link</button>
+      </form>
+    )}
+  </div>
+</AdminLayout>

@@ -1,0 +1,50 @@
+---
+/** Cross-sell panel for a related premium guide. Always shows what is free vs paid. */
+import Photo from '../media/Photo.astro';
+import Icon from '../Icon.astro';
+import type { GuideMarketing } from '../../features/content/schemas';
+
+interface Props {
+  guide: GuideMarketing;
+}
+const { guide } = Astro.props;
+---
+<aside class="gpromo" aria-labelledby={`gp-${guide.slug}`}>
+  <div class="gpromo__cover"><Photo image={guide.cover} ratio="3 / 4" hideLabel seed={7} /></div>
+  <div>
+    <p class="eyebrow">Optional digital guide</p>
+    <h2 id={`gp-${guide.slug}`} class="gpromo__title">Take {guide.title} with you</h2>
+    <p>{guide.summary}</p>
+    <p class="muted gpromo__small">Everything on this page stays free. The guide bundles a ready-made plan, practical notes and a map link.</p>
+    <a class="btn btn--sm" href={`/guides/${guide.slug}`}>Preview the guide <Icon name="arrow-right" size={16} /></a>
+  </div>
+</aside>
+
+<style>
+  .gpromo {
+    display: grid;
+    grid-template-columns: clamp(64px, 25%, 120px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+    padding: 20px;
+    border-radius: var(--radius);
+    background: linear-gradient(140deg, #fff7df, var(--paper));
+    border: 1px solid var(--sand);
+  }
+  .gpromo__cover {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transform: rotate(-2deg);
+  }
+  .gpromo__title {
+    font-size: var(--step-1);
+    margin-bottom: 6px;
+  }
+  .gpromo p {
+    margin-bottom: 10px;
+  }
+  .gpromo__small {
+    font-size: 0.88rem;
+  }
+</style>

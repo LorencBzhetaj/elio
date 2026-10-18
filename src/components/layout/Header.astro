@@ -1,0 +1,115 @@
+---
+import Logo from '../Logo.astro';
+import Icon from '../Icon.astro';
+import { mainNav } from '../../config/site';
+
+interface Props {
+  /** Transparent header laid over a full-bleed hero. */
+  overlay?: boolean;
+  brand?: string;
+}
+const { overlay = false, brand } = Astro.props;
+const path = Astro.url.pathname;
+const isActive = (href: string) => path === href || path.startsWith(href + '/');
+---
+<header class:list={['site-header', { 'site-header--overlay': overlay }]}>
+  <div class="container site-header__inner">
+    {/* Over the panorama hero, the hero renders the large stacked logo instead. */}
+    {!overlay && <Logo brand={brand} />}
+    <nav class="site-header__nav" aria-label="Main">
+      <ul>
+        {mainNav.map((item) => (
+          <li>
+            <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+    <div class="site-header__actions">
+      <a class="icon-btn" href="/search" aria-label="Search">
+        <Icon name="search" />
+      </a>
+      <a class="icon-btn site-header__trip" href="/my-trip" aria-label="My trip">
+        <Icon name="calendar" />
+      </a>
+      <button class="icon-btn" type="button" data-open-menu aria-haspopup="dialog" aria-controls="site-menu" aria-label="Open menu">
+        <Icon name="menu" />
+      </button>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: rgb(250 245 235 / 0.92);
+    backdrop-filter: saturate(1.2) blur(10px);
+    border-bottom: 1px solid rgb(122 24 48 / 0.08);
+  }
+  /* Stays in normal flow; the panorama hero pulls itself up underneath with a negative margin. */
+  .site-header--overlay {
+    position: relative;
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom: 0;
+  }
+  .site-header__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 24px;
+    min-height: var(--header-h);
+  }
+  .site-header__nav {
+    margin-left: auto;
+  }
+  .site-header__nav ul {
+    display: flex;
+    gap: 4px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .site-header__nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 999px;
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.97rem;
+  }
+  .site-header__nav a:hover {
+    background: rgb(122 24 48 / 0.07);
+  }
+  .site-header__nav a[aria-current='page'] {
+    color: var(--burgundy);
+    box-shadow: inset 0 -2px 0 var(--burgundy);
+    border-radius: 0;
+  }
+  .site-header__actions {
+    display: flex;
+    gap: 8px;
+  }
+  @media (max-width: 1080px) {
+    .site-header__nav {
+      display: none;
+    }
+    .site-header__actions {
+      margin-left: auto;
+    }
+  }
+  @media (max-width: 767.98px) {
+    .site-header__trip {
+      display: none;
+    }
+    .site-header__actions .icon-btn {
+      width: 44px;
+      height: 44px;
+    }
+  }
+</style>
