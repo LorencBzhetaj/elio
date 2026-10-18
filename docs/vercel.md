@@ -49,8 +49,9 @@ Notes for this demo:
 - Payments are the **mock** gateway; no real money.
 - No real email is sent (`EMAIL_TRANSPORT=console`). Sign-in links appear in **Vercel → Logs**
   (`DEV sign-in link …`). For real email set `EMAIL_TRANSPORT=smtp` and `SMTP_URL`.
-- PDF downloads need private object storage on Vercel (`STORAGE_DRIVER=s3` + `S3_*`); without it the
-  download shows "isn't available".
+- Test PDF downloads work: on a preview without stored files the one-page "TEST PLACEHOLDER" PDF is
+  generated on request (only outside production, only for the seeded test guides, only via the signed
+  60-second link after a purchase). Real guide PDFs will need private storage (`STORAGE_DRIVER=s3` + `S3_*`).
 - `vercel.json` schedules `/api/cron/run` once a day (Hobby plan limit) for email retries and payment
   reconciliation; emails are also sent immediately when a purchase or sign-in happens.
 
