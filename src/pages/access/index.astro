@@ -4,6 +4,7 @@ import Icon from '../../components/Icon.astro';
 import { getDb } from '../../features/services';
 import { requestAccessLink } from '../../features/access/tokens';
 import { rateLimit } from '../../lib/rate-limit';
+import { deliverQueuedEmailsInDev } from '../../lib/dev-mail';
 
 export const prerender = false;
 
@@ -15,6 +16,7 @@ if (Astro.request.method === 'POST') {
     limited = true;
   } else {
     await requestAccessLink(await getDb(), String(form.get('email') ?? ''), { role: 'buyer' });
+    await deliverQueuedEmailsInDev();
     sent = true; // Same message whether or not the address has purchases.
   }
 }

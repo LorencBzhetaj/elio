@@ -3,6 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import { adminEmails, getDb } from '../../features/services';
 import { requestAccessLink } from '../../features/access/tokens';
 import { rateLimit } from '../../lib/rate-limit';
+import { deliverQueuedEmailsInDev } from '../../lib/dev-mail';
 
 export const prerender = false;
 
@@ -11,6 +12,7 @@ if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   if (rateLimit(`admin-login:${Astro.clientAddress}`, 5, 15 * 60_000)) {
     await requestAccessLink(await getDb(), String(form.get('email') ?? ''), { role: 'admin', adminEmails: adminEmails() });
+    await deliverQueuedEmailsInDev();
   }
   sent = true; // generic
 }

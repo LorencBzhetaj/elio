@@ -24,6 +24,12 @@ export function createConsoleTransport(dir = '.data/mail'): EmailTransport {
       const file = path.join(dir, `${new Date().toISOString().replace(/[:.]/g, '-')}-${Math.random().toString(36).slice(2, 7)}.html`);
       await fs.writeFile(file, `<!-- To: ${m.to} | Subject: ${m.subject} -->\n${m.html}`, 'utf8');
       console.info(`[email] to=${maskEmail(m.to)} subject="${m.subject}" saved=${file}`);
+      // Local development convenience only: print the link so it can be opened from the terminal.
+      // Never enabled outside APP_ENV=development, where real emails must not be logged.
+      if (process.env.APP_ENV === 'development') {
+        const link = /https?:\/\/\S+\/access\/redeem\?token=[\w-]+/.exec(m.text)?.[0];
+        if (link) console.info(`[email] DEV sign-in link (single use, expires soon): ${link}`);
+      }
     },
   };
 }

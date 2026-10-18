@@ -41,7 +41,8 @@ npm run dev                 # http://localhost:4321
   authorise only, or pay with a delayed callback.
 - Emails (dev): written to `.data/mail/*.html` by the worker: `npm run worker` (stop `npm run dev` first
   when using PGlite — an embedded database can only be opened by one process; with PostgreSQL both run together).
-- Admin: set `ADMIN_EMAILS`, open `/admin/login`, run the worker, open the link from `.data/mail/`.
+- Admin: set `ADMIN_EMAILS`, open `/admin/login` and enter that address. In development the sign-in link
+  is printed in the `npm run dev` terminal (single use, 15 minutes); no worker needed.
 
 With PostgreSQL instead of PGlite: `docker compose up -d db`, set
 `DATABASE_URL=postgres://albania:albania@localhost:5432/albania`, then `npm run db:migrate && npm run db:seed`.
