@@ -38,7 +38,7 @@ export default defineConfig({
       // embedded dev database must never be reachable that way.
       fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/storage/**', '**/.data/**'] },
       // Local DB and dev emails change at runtime; they must not trigger reloads.
-      watch: { ignored: ['**/.data/**', '**/storage/**'] },
+      watch: { ignored: ['**/.data/**', '**/storage/**', '**/.vercel/**', '**/dist/**'] },
     },
   },
 });

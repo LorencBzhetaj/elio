@@ -9,6 +9,7 @@ import { mapConfig } from '../features/map/config';
 import { currentSession } from '../lib/session';
 import { listOwnedGuides } from '../features/access/downloads';
 import { getDb } from '../features/services';
+import '../styles/map-card.css';
 
 export const prerender = false;
 
@@ -216,96 +217,15 @@ Astro.response.headers.set('Vary', 'Cookie');
     padding: 4px 6px 2px 74px;
     flex-wrap: wrap;
   }
-  .mbtn {
-    display: inline-flex;
-    align-items: center;
-    min-height: 40px;
-    padding: 0 14px;
-    border-radius: 999px;
-    border: 1px solid var(--sand-line);
-    background: var(--white);
-    color: var(--ink);
-    text-decoration: none;
-    font-size: 0.88rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .mbtn--save[aria-pressed='true'] {
-    background: var(--burgundy);
-    border-color: var(--burgundy);
-    color: #fff;
-  }
   .sthumb--premium {
     background: radial-gradient(circle, #c98a16 0 30%, #fff3cd 32%);
   }
 
-  /* Desktop: top-left of the map so the actions are always on screen. */
-  .mcard {
-    position: absolute;
+  /* Desktop: card at the top-left of the map so its actions are always on screen. */
+  .mapx__map .mcard {
     left: 16px;
     top: 16px;
-    z-index: 4;
     width: min(380px, calc(100% - 32px));
-    display: grid;
-    grid-template-columns: 96px minmax(0, 1fr);
-    gap: 12px;
-    padding: 12px;
-    border-radius: 18px;
-    background: var(--paper);
-    box-shadow: var(--shadow-lift);
-  }
-  .mcard[hidden] {
-    display: none;
-  }
-  .mcard > .sthumb {
-    width: 96px;
-    height: 96px;
-    border-radius: 12px;
-  }
-  .mcard__body {
-    min-width: 0;
-  }
-  .mcard__title {
-    font-size: 1.3rem;
-    margin: 0 28px 2px 0;
-  }
-  .mcard__meta {
-    margin: 0 0 4px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .mcard__summary {
-    margin: 0 0 8px;
-    font-size: 0.9rem;
-  }
-  .mcard__note {
-    margin: 0 0 8px;
-    font-size: 0.8rem;
-    color: #5b4300;
-  }
-  .mcard__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .mcard__close {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 0;
-    background: var(--cream-deep);
-    font-size: 1.4rem;
-    line-height: 1;
-    cursor: pointer;
-  }
-  .mcard:not(:has(> .sthumb)) {
-    grid-template-columns: 1fr;
   }
 
   /* Phones and small tablets: List / Map switch; selected card as a sheet above the bottom nav. */
@@ -351,17 +271,12 @@ Astro.response.headers.set('Vary', 'Cookie');
       height: calc(100dvh - var(--header-h) - var(--bottom-nav-h) - 150px);
       min-height: 360px;
     }
-    .mcard {
+    .mapx__map .mcard {
       top: auto;
       left: 8px;
       right: 8px;
       bottom: calc(8px + env(safe-area-inset-bottom, 0px));
       width: auto;
-      grid-template-columns: 72px minmax(0, 1fr);
-    }
-    .mcard > .sthumb {
-      width: 72px;
-      height: 72px;
     }
   }
 </style>

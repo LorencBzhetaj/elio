@@ -4,7 +4,8 @@
  */
 import { initFilterBar, type FilterBarConfig } from '../filters/ui';
 import type { FilterItem, FilterState } from '../filters/core';
-import { isSaved, onTripChange, toggleSaved } from '../trip/client';
+import { onTripChange } from '../trip/client';
+import { fillCard, fillPlaceCard, paintSave, saveButton, thumb } from './card';
 import type { MapRuntime } from './runtime';
 
 interface Item extends FilterItem {
@@ -55,39 +56,6 @@ export function initMapExplorer(root: HTMLElement) {
   let selected: string | null = new URLSearchParams(location.search).get('place');
 
   // ---------- list ----------
-  function thumb(img: Item['image']) {
-    if (img.src) {
-      const el = document.createElement('img');
-      el.src = img.src;
-      el.alt = '';
-      el.loading = 'lazy';
-      el.className = 'sthumb';
-      return el;
-    }
-    const el = document.createElement('span');
-    el.className = `sthumb sthumb--${img.scene}`;
-    el.setAttribute('aria-hidden', 'true');
-    return el;
-  }
-
-  function saveButton(item: { id: string; title: string; tripId: string | null }) {
-    if (!item.tripId) return null;
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'mbtn mbtn--save';
-    b.dataset.save = item.tripId;
-    const saved = isSaved(item.tripId);
-    b.setAttribute('aria-pressed', String(saved));
-    b.textContent = saved ? 'Saved ✓' : 'Save to my trip';
-    b.setAttribute('aria-label', saved ? `${item.title} is saved — remove from my trip` : `Save ${item.title} to my trip`);
-    b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const r = toggleSaved(item.tripId!);
-      announcer.textContent = r === null ? 'Could not save — browser storage is blocked.' : r ? `${item.title} saved to your trip.` : `${item.title} removed from your trip.`;
-    });
-    return b;
-  }
-
   function listItem(item: Item): HTMLLIElement {
     const li = document.createElement('li');
     li.className = 'mitem';
@@ -121,7 +89,7 @@ export function initMapExplorer(root: HTMLElement) {
     details.textContent = 'Details';
     details.setAttribute('aria-label', `${item.title} — view details`);
     actions.append(details);
-    const save = saveButton(item);
+    const save = saveButton(item, (msg) => (announcer.textContent = msg));
     if (save) actions.append(save);
     li.append(main, actions);
     return li;
@@ -170,59 +138,18 @@ export function initMapExplorer(root: HTMLElement) {
   function renderCard() {
     const item = selected ? byId.get(selected) : undefined;
     const prem = selected ? premiumById.get(selected) : undefined;
-    if (!item && !prem) {
-      card.hidden = true;
-      return;
-    }
-    card.replaceChildren();
-    const close = document.createElement('button');
-    close.type = 'button';
-    close.className = 'mcard__close';
-    close.setAttribute('aria-label', 'Close place details');
-    close.textContent = '×';
-    close.addEventListener('click', () => select(null));
-    const body = document.createElement('div');
-    body.className = 'mcard__body';
-    const h = document.createElement('h2');
-    h.className = 'mcard__title';
-    const meta = document.createElement('p');
-    meta.className = 'mcard__meta';
-    const sum = document.createElement('p');
-    sum.className = 'mcard__summary';
-    const actions = document.createElement('div');
-    actions.className = 'mcard__actions';
+    const announce = (msg: string) => (announcer.textContent = msg);
     if (item) {
-      h.textContent = item.title;
-      meta.textContent = [item.category, item.destination].filter(Boolean).join(' · ');
-      sum.textContent = item.summary;
-      const a = document.createElement('a');
-      a.className = 'btn btn--sm';
-      a.href = item.url;
-      a.textContent = 'View details';
-      actions.append(a);
-      const s = saveButton(item);
-      if (s) actions.append(s);
-      card.append(close, thumb(item.image), body);
-      if (item.verified === false) {
-        const note = document.createElement('p');
-        note.className = 'mcard__note';
-        note.textContent = item.precision === 'town-centre' ? 'Pin shows the approximate town centre and has not been verified yet.' : 'Location not verified yet.';
-        body.append(h, meta, sum, note, actions);
-      } else body.append(h, meta, sum, actions);
+      fillPlaceCard(card, item, { onClose: () => select(null), announce });
     } else if (prem) {
-      h.textContent = prem.title;
-      meta.textContent = `From your ${prem.guide}`;
-      sum.textContent = prem.note ?? '';
       const a = document.createElement('a');
       a.className = 'btn btn--sm';
       a.href = '/my-guides';
       a.textContent = 'Open my guides';
-      actions.append(a);
-      card.append(close, body);
-      body.append(h, meta, sum, actions);
+      fillCard(card, { title: prem.title, meta: `From your ${prem.guide}`, summary: prem.note ?? '', actions: [a] }, () => select(null));
+    } else {
+      card.hidden = true;
     }
-    card.hidden = false;
-    card.setAttribute('aria-label', `${h.textContent} details`);
   }
 
   function select(id: string | null, o: { fly?: boolean; fromList?: boolean; fromMap?: boolean } = {}) {
@@ -346,13 +273,7 @@ export function initMapExplorer(root: HTMLElement) {
   io.observe(canvas);
   mobile.addEventListener('change', () => runtime?.resize());
 
-  onTripChange(() => {
-    root.querySelectorAll<HTMLButtonElement>('[data-save]').forEach((b) => {
-      const saved = isSaved(b.dataset.save!);
-      b.setAttribute('aria-pressed', String(saved));
-      b.textContent = saved ? 'Saved ✓' : 'Save to my trip';
-    });
-  });
+  onTripChange(() => root.querySelectorAll<HTMLButtonElement>('[data-save]').forEach((b) => paintSave(b)));
 
   card.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') select(null);

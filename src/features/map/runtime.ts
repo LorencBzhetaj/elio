@@ -27,12 +27,15 @@ export interface MapRuntimeOptions {
   onSelect?: (id: string) => void;
   onUserMove?: () => void;
   onClusterLeaves?: (ids: string[]) => void;
+  /** Tap/click on the map where there is no pin or group. */
+  onBackgroundClick?: () => void;
 }
 
 export interface MapRuntime {
   setPoints(points: MapPoint[]): void;
   setPremium(points: MapPoint[]): void;
-  select(id: string | null, opts?: { fly?: boolean; coords?: [number, number] }): void;
+  /** `offsetY` shifts the pin up (negative) so it stays visible above a card covering the bottom. */
+  select(id: string | null, opts?: { fly?: boolean; coords?: [number, number]; keepZoom?: boolean; offsetY?: number }): void;
   getBounds(): BBox;
   fitPoints(points: MapPoint[]): void;
   resize(): void;
@@ -79,6 +82,8 @@ export function createMapRuntime(opts: MapRuntimeOptions): Promise<MapRuntime> {
       reject(err);
     }
     map.on('error', (e) => !loaded && fail(e.error ?? new Error('Map error')));
+    // Dev-only hook for browser tests (finding pin positions); stripped from production builds.
+    if (import.meta.env.DEV) (opts.container as HTMLElement & { __map?: MlMap }).__map = map;
     map.touchZoomRotate.disableRotation();
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
 
@@ -161,6 +166,11 @@ export function createMapRuntime(opts: MapRuntimeOptions): Promise<MapRuntime> {
         const id = e.features?.[0]?.properties?.id;
         if (id) opts.onSelect?.(String(id));
       });
+      map.on('click', (e) => {
+        if (!opts.onBackgroundClick) return;
+        const hit = map.queryRenderedFeatures(e.point, { layers: ['clusters', 'points', 'premium-points'] });
+        if (hit.length === 0) opts.onBackgroundClick();
+      });
       map.on('moveend', (e) => {
         if ((e as { originalEvent?: unknown }).originalEvent) opts.onUserMove?.();
       });
@@ -174,7 +184,14 @@ export function createMapRuntime(opts: MapRuntimeOptions): Promise<MapRuntime> {
         },
         select(id, o = {}) {
           map.setFilter('selected', ['==', ['get', 'id'], id ?? '__none__']);
-          if (id && o.fly && o.coords) map.easeTo({ center: o.coords, zoom: Math.max(map.getZoom(), 11), duration: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 600 });
+          if (id && o.fly && o.coords) {
+            map.easeTo({
+              center: o.coords,
+              zoom: o.keepZoom ? map.getZoom() : Math.max(map.getZoom(), 11),
+              offset: [0, o.offsetY ?? 0],
+              duration: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 500,
+            });
+          }
         },
         getBounds() {
           const b = map.getBounds();

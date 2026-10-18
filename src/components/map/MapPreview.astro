@@ -2,10 +2,12 @@
 /**
  * Homepage teaser for the map. Same data (/api/map/points) and runtime as /map, loaded only when the
  * section approaches the viewport, so it never affects the hero. Gestures are cooperative (no scroll trap).
+ * Tapping a pin opens the place card right here (same card as /map); it never navigates away by itself.
  */
 import Icon from '../Icon.astro';
 import { mapConfig } from '../../features/map/config';
 import { ALBANIA_BOUNDS } from '../../features/map/data';
+import '../../styles/map-card.css';
 
 const { styleUrl, font } = mapConfig();
 ---
@@ -14,33 +16,72 @@ const { styleUrl, font } = mapConfig();
     <div class="mprev__copy">
       <p class="hand mprev__note" aria-hidden="true">Find it on the map</p>
       <h2 id="h-map">Explore the map</h2>
-      <p class="muted">Destinations and photo spots across Albania in one view. Filter by category, open a place and save it to your trip.</p>
+      <p class="muted">Destinations and photo spots across Albania in one view. Tap a pin to see the place here and save it to your trip.</p>
       <a class="btn" href="/map">Explore the map <Icon name="arrow-right" size={18} /></a>
     </div>
     <div class="mprev__map" data-map-preview data-style={styleUrl} data-font={font} data-bounds={JSON.stringify(ALBANIA_BOUNDS)}>
       <div class="mprev__canvas" data-canvas role="region" aria-label="Map preview of Albania"></div>
       <p class="mprev__status" data-status role="status">Map preview loads as you scroll.</p>
+      <article class="mcard" data-card hidden tabindex="-1" aria-live="polite"></article>
+      <p class="visually-hidden" data-announce aria-live="polite"></p>
     </div>
   </div>
 </section>
 
 <script>
+  import { fillPlaceCard, paintSave, type CardPlace } from '../../features/map/card';
+  import { onTripChange } from '../../features/trip/client';
+  import type { MapRuntime } from '../../features/map/runtime';
+
+  type Item = CardPlace & { id: string; kind: string; coords: [number, number] | null };
+
   const root = document.querySelector<HTMLElement>('[data-map-preview]');
   if (root) {
     const status = root.querySelector<HTMLElement>('[data-status]')!;
+    const card = root.querySelector<HTMLElement>('[data-card]')!;
+    const announcer = root.querySelector<HTMLElement>('[data-announce]')!;
+    const announce = (msg: string) => (announcer.textContent = msg);
+    let rt: MapRuntime | null = null;
+    let byId = new Map<string, Item>();
+
+    function select(id: string | null) {
+      const item = id ? byId.get(id) : undefined;
+      rt?.select(item ? id : null);
+      if (!item) {
+        card.hidden = true;
+        return;
+      }
+      const full = document.createElement('a');
+      full.className = 'slink mprev__full';
+      full.href = `/map?place=${encodeURIComponent(item.id)}`;
+      full.textContent = 'Open full map';
+      fillPlaceCard(card, item, { onClose: () => select(null), announce, extraActions: [full] });
+      // Keep the tapped pin visible above the card.
+      const mapH = card.parentElement!.getBoundingClientRect().height;
+      const cardH = card.getBoundingClientRect().height;
+      if (item.coords) rt?.select(item.id, { fly: true, coords: item.coords, keepZoom: true, offsetY: -Math.min(cardH / 2 + 12, mapH / 2 - 40) });
+      announce(`${item.title} selected`);
+    }
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') select(null);
+    });
+    onTripChange(() => card.querySelectorAll<HTMLButtonElement>('[data-save]').forEach((b) => paintSave(b)));
+
     const load = async () => {
       status.textContent = 'Loading map…';
       try {
         const [{ createMapRuntime }, res] = await Promise.all([import('../../features/map/runtime'), fetch('/api/map/points')]);
         if (!res.ok) throw new Error(`points ${res.status}`);
-        const { items } = (await res.json()) as { items: { id: string; kind: string; title: string; coords: [number, number] | null }[] };
-        const rt = await createMapRuntime({
+        const { items } = (await res.json()) as { items: Item[] };
+        byId = new Map(items.map((i) => [i.id, i]));
+        rt = await createMapRuntime({
           container: root.querySelector('[data-canvas]')!,
           styleUrl: root.dataset.style!,
           font: root.dataset.font!,
           bounds: JSON.parse(root.dataset.bounds!),
           cooperative: true,
-          onSelect: (id) => window.location.assign(`/map?place=${encodeURIComponent(id)}`),
+          onSelect: (id) => select(id),
+          onBackgroundClick: () => select(null),
         });
         rt.setPoints(items.filter((i) => i.coords).map((i) => ({ id: i.id, kind: i.kind, title: i.title, coords: i.coords! })));
         status.hidden = true;
@@ -102,5 +143,58 @@ const { styleUrl, font } = mapConfig();
   }
   .mprev__status[hidden] {
     display: none;
+  }
+  .mprev__map .mcard {
+    left: 12px;
+    bottom: 12px;
+    width: min(400px, calc(100% - 24px));
+  }
+  /* Compact card for the smaller preview map. */
+  .mprev__map :global(.mcard__summary) {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .mprev__map :global(.mcard__note) {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+  .mprev__map :global(.mcard__actions) {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+  }
+  .mprev__map :global(.mcard__actions .btn),
+  .mprev__map :global(.mcard__actions .mbtn) {
+    min-height: 40px;
+    padding-inline: 12px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .mprev__map :global(.mprev__full) {
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  @media (max-width: 767.98px) {
+    .mprev__map {
+      height: 420px;
+    }
+    .mprev__map :global(.mcard) {
+      grid-template-columns: 56px minmax(0, 1fr);
+      gap: 10px;
+      padding: 10px;
+    }
+    .mprev__map :global(.mcard > .sthumb) {
+      width: 56px;
+      height: 56px;
+    }
+    .mprev__map .mcard {
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      width: auto;
+    }
   }
 </style>

@@ -1,0 +1,94 @@
+/* Place card and small buttons shared by the full map (/map) and the homepage map preview.
+   Each page only decides where the card sits inside its map. */
+.mbtn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--sand-line);
+  background: var(--white);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mbtn--save[aria-pressed='true'] {
+  background: var(--burgundy);
+  border-color: var(--burgundy);
+  color: #fff;
+}
+.mcard {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--paper);
+  box-shadow: var(--shadow-lift);
+}
+.mcard[hidden] {
+  display: none;
+}
+.mcard > .sthumb {
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+}
+.mcard__body {
+  min-width: 0;
+}
+.mcard__title {
+  font-size: 1.3rem;
+  margin: 0 28px 2px 0;
+}
+.mcard__meta {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mcard__summary {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+}
+.mcard__note {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  color: #5b4300;
+}
+.mcard__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mcard__close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--cream-deep);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.mcard:not(:has(> .sthumb)) {
+  grid-template-columns: 1fr;
+}
+@media (max-width: 899.98px) {
+  .mcard {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+  .mcard > .sthumb {
+    width: 72px;
+    height: 72px;
+  }
+}
