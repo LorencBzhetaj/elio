@@ -7,7 +7,7 @@
 import Photo from '../media/Photo.astro';
 import Icon from '../Icon.astro';
 import SearchBox from '../search/SearchBox.astro';
-import Branch from '../decor/Branch.astro';
+import PostStamp from '../decor/PostStamp.astro';
 import type { HeroProps } from './types';
 
 type Props = Omit<HeroProps, 'variant'>;
@@ -26,7 +26,6 @@ const features = [
     <div class="hero-pano__fade" aria-hidden="true"></div>
   </div>
 
-  <Branch class="hero-pano__branch" />
   <div class="container hero-pano__content">
     <div class="hero-pano__brand">
       {tagline && <p class="hero-pano__tagline">{tagline}</p>}
@@ -40,9 +39,12 @@ const features = [
     </div>
 
     <div class="hero-pano__search">
+      <PostStamp kind="flowers" class="hero-pano__flowers" />
       <SearchBox variant="hero" id="hero-q" />
     </div>
 
+    <div class="hero-pano__lower">
+    <PostStamp class="hero-pano__poststamp" />
     <div class="hero-pano__actions">
       <a class="btn" href={primaryAction.href}>{primaryAction.label} <Icon name="arrow-right" size={18} /></a>
       <a class="btn btn--outline" href={secondaryAction.href}><Icon name="bag" size={18} /> {secondaryAction.label}</a>
@@ -53,6 +55,7 @@ const features = [
         <li><span class="hero-pano__ficon"><Icon name={f.icon} size={22} /></span>{f.label}</li>
       ))}
     </ul>
+    </div>
   </div>
 </section>
 
@@ -78,15 +81,33 @@ const features = [
       linear-gradient(90deg, rgb(250 245 235 / 0.94) 0%, rgb(250 245 235 / 0.75) 34%, rgb(250 245 235 / 0) 60%),
       linear-gradient(180deg, rgb(250 245 235 / 0) 55%, var(--cream) 98%);
   }
-  /* Olive-branch line art on the left edge, behind the content. */
-  .hero-pano :global(.hero-pano__branch) {
+  /* Reference detail: dried flowers peeking above the search field, and a postage stamp with an
+     olive sprig in a narrow left margin beside the buttons and the four icons. */
+  .hero-pano__search {
+    position: relative;
+  }
+  .hero-pano__search :global(.hero-pano__flowers) {
     position: absolute;
-    left: -22px;
-    top: calc(var(--overlay-h) + clamp(300px, 34vw, 430px));
-    width: clamp(70px, 8vw, 120px);
+    left: calc(-1 * var(--gutter) + 2px);
+    bottom: 34%;
+    width: clamp(50px, 5vw, 80px);
     height: auto;
-    opacity: 0.55;
-    z-index: 0;
+    opacity: 0.8;
+    z-index: -1;
+  }
+  .hero-pano__lower {
+    --decor-w: clamp(54px, 9vw, 108px);
+    position: relative;
+    grid-column: 1;
+    padding-left: var(--decor-w);
+  }
+  .hero-pano__lower :global(.hero-pano__poststamp) {
+    position: absolute;
+    left: calc(-0.5 * var(--gutter) - 6px);
+    top: 2px;
+    width: calc(var(--decor-w) * 1.75);
+    height: auto;
+    z-index: -1;
   }
   .hero-pano__content {
     position: relative;
@@ -235,9 +256,10 @@ const features = [
     .hero-pano__actions .btn {
       flex: 1 1 120px;
       min-width: 0;
-      padding-inline: 12px;
+      padding-inline: 10px;
       white-space: nowrap;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
+      gap: 6px;
     }
     /* Four icons in one straight row, as in the reference. */
     .hero-pano__features {

@@ -2,8 +2,8 @@
 /**
  * Everything below the hero, identical for Hero A and Hero B so the client compares only the hero.
  * Layout follows the mobile reference (rows of three cards on phones, category circles, "Plan your
- * trip" tiles, closing banner). Sections that would need invented data — ratings, reviews, priced
- * experiences, "100+" claims — are intentionally left out.
+ * trip" tiles, closing banner). Sections that would need invented data — ratings, reviews, prices
+ * for tours, "100+" claims — are intentionally left out; "Top experiences" only links existing content.
  */
 import Photo from '../media/Photo.astro';
 import Icon, { type IconName } from '../Icon.astro';
@@ -38,6 +38,18 @@ const categories: { label: string; icon: IconName; href: string }[] = [
   { label: 'Cities', icon: 'building', href: '/destinations?experience=city' },
   { label: 'Itineraries', icon: 'route', href: '/journal?category=itineraries' },
 ];
+// Top experiences: built only from places, destinations and articles that exist in the content.
+const dest = (slug: string) => content.destinations.find((d) => d.slug === slug);
+const place = (slug: string) => content.places.find((p) => p.slug === slug);
+const article = (slug: string) => content.articles.find((a) => a.slug === slug);
+const names = (types: string[]) => content.destinations.filter((d) => d.types.some((t) => types.includes(t))).map((d) => d.title);
+const experiences = [
+  { title: 'Hiking in the Alps', sub: 'Theth · Albanian Alps', cover: dest('theth')?.cover, href: article('hiking-in-theth') ? '/journal/hiking-in-theth' : '/destinations/theth' },
+  { title: 'Riviera beaches', sub: names(['coast']).join(', '), cover: dest('ksamil')?.cover, href: '/destinations?experience=beach' },
+  { title: 'Old stone towns', sub: names(['historic-town']).join(', '), cover: dest('berat')?.cover, href: '/destinations?experience=culture' },
+  { title: 'Lake Komani', sub: 'Photo spot', cover: place('lake-komani')?.cover, href: '/photo-spots/lake-komani' },
+  { title: 'Albanian food', sub: 'What to try', cover: article('albanian-food-to-try')?.cover, href: '/journal/albanian-food-to-try' },
+].filter((e): e is typeof e & { cover: NonNullable<typeof e.cover> } => Boolean(e.cover && e.sub));
 const essentialIcon: Record<string, IconName> = { bus: 'bus', bag: 'wallet', 'wifi-off': 'wifi-off', sun: 'sun', info: 'info', compass: 'compass' };
 ---
 <!-- Popular destinations: three across on phones, four on wider screens -->
@@ -69,18 +81,54 @@ const essentialIcon: Record<string, IconName> = { bus: 'bus', bag: 'wallet', 'wi
 <section class="hs" aria-labelledby="h-guides-banner">
   <div class="container">
     <div class="hbanner">
-      <svg class="hbanner__art" viewBox="0 0 120 90" aria-hidden="true" focusable="false">
-        <path d="M18 80V44l16-12 16 12v36M50 80V34l14-14 14 14v46" fill="none" stroke="currentColor" stroke-width="1.6" />
-        <path d="M10 80h100M60 56h8v24h-8z" fill="none" stroke="currentColor" stroke-width="1.6" />
+      <svg class="hbanner__art hbanner__art--castle" viewBox="0 0 150 100" aria-hidden="true" focusable="false">
+        <g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.7">
+          <path d="M70 14 q8 -5 16 0 t16 0 t16 0 t16 0 M70 22 q8 -5 16 0 t16 0 t16 0 t16 0 M74 30 q8 -5 16 0 t16 0 t16 0 t16 0 M80 38 q8 -5 16 0 t16 0 t16 0" />
+        </g>
+        <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M30 86V30h-4v-8h6v4h5v-4h5v4h5v-4h6v8h-4v56" />
+          <path d="M34 42h3v7h-3zM43 42h3v7h-3zM38 58h4v8h-4z" />
+          <path d="M51 86V56l18-14 18 14v30M47 58l22-17 22 17" />
+          <path d="M58 64h5v7h-5zM74 64h5v7h-5zM65 86V76a4 4 0 0 1 8 0v10" />
+          <path d="M8 92c10-8 18-4 26-8s16-2 24-6 22 2 34 0 26 6 40 8" />
+          <path d="M14 96h112" stroke-width="1" />
+          <path d="M32 36h18M32 52h18M32 68h18M54 76h12M76 78h10" stroke-width="0.7" opacity="0.7" />
+        </g>
       </svg>
       <div class="hbanner__copy">
         <h2 id="h-guides-banner" class="hbanner__title">Ready-made plans when you want them.</h2>
-        <p>Everything practical on this site is free. Our digital guides add day-by-day plans and map links.</p>
+        <p>Day-by-day plans and map links. Everything else here is free.</p>
       </div>
       <a class="btn btn--sm" href="/guides">Browse guides <Icon name="arrow-right" size={16} /></a>
     </div>
   </div>
 </section>
+
+<!-- Top experiences: links to existing content only (no invented prices or ratings) -->
+{experiences.length > 0 && (
+  <section class="hs" aria-labelledby="h-exp">
+    <div class="container">
+      <div class="section-head">
+        <h2 id="h-exp">Top experiences</h2>
+        <span class="section-head__rule" aria-hidden="true"></span>
+        <a class="section-head__link" href="/destinations">View all <Icon name="arrow-right" size={18} /></a>
+      </div>
+      <ul class="xrow" role="list">
+        {experiences.map((e, i) => (
+          <li class="dtile">
+            <Photo image={e.cover} ratio="3 / 4" seed={i + 61} sizes="(max-width: 767px) 42vw, 20vw" hideLabel />
+            <span class="dtile__shade" aria-hidden="true"></span>
+            <span class="dtile__body">
+              <a class="dtile__title" href={e.href}>{e.title}</a>
+              <span class="dtile__kicker">{e.sub}</span>
+            </span>
+            <span class="dtile__go" aria-hidden="true"><Icon name="arrow-right" size={16} /></span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}
 
 <!-- Explore by category -->
 <section class="hs" aria-labelledby="h-cat">
@@ -476,13 +524,68 @@ const essentialIcon: Record<string, IconName> = { bus: 'bus', bag: 'wallet', 'wi
     font-size: clamp(0.8rem, 0.72rem + 0.35vw, 1rem);
     color: var(--muted);
   }
+  .hbanner__art--castle {
+    width: clamp(78px, 13vw, 150px);
+    color: #6f5640;
+    opacity: 0.85;
+  }
+  /* Phones: art, copy and button stay on one row (button on the right, as in the reference). */
   @media (max-width: 599.98px) {
     .hbanner {
-      grid-template-columns: auto minmax(0, 1fr);
+      gap: 8px;
+      padding: 12px 10px 12px 8px;
+    }
+    .hbanner__art--castle {
+      width: 58px;
+    }
+    .hbanner__title {
+      font-size: 0.98rem;
+      line-height: 1.15;
+    }
+    .hbanner__copy p {
+      font-size: 0.72rem;
+      line-height: 1.3;
     }
     .hbanner .btn {
-      grid-column: 1 / -1;
-      justify-self: start;
+      font-size: 0.78rem;
+      padding: 8px 10px;
+      min-height: 40px;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .hbanner .btn :global(svg) {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  /* Top experiences: a swipeable row on phones, a grid on wider screens. */
+  .xrow {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(150px, 42%);
+    gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin-inline: calc(-1 * var(--gutter));
+    padding: 2px var(--gutter) 6px;
+    scroll-padding-inline: var(--gutter);
+  }
+  .xrow::-webkit-scrollbar {
+    display: none;
+  }
+  .xrow > li {
+    scroll-snap-align: start;
+  }
+  @media (min-width: 768px) {
+    .xrow {
+      grid-auto-flow: row;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      overflow: visible;
+      margin-inline: 0;
+      padding: 0;
+      gap: clamp(10px, 1.6vw, 20px);
     }
   }
 

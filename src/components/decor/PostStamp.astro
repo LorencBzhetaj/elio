@@ -1,0 +1,74 @@
+---
+/**
+ * Original line art: a perforated postage stamp with an olive sprig, wavy postmark lines and a
+ * sprig of dried flowers, as in the hero reference. Purely ornamental: aria-hidden, never blocks taps.
+ */
+interface Props {
+  class?: string;
+  kind?: 'stamp' | 'flowers';
+}
+const { class: className, kind = 'stamp' } = Astro.props;
+
+// Perforation: holes every 8 units around a 100×124 stamp at (10,14).
+const holes: [number, number][] = [];
+for (let x = 10; x <= 110; x += 8) holes.push([x, 14], [x, 138]);
+for (let y = 22; y <= 130; y += 8) holes.push([10, y], [110, y]);
+const leaves = [
+  [44, 106, -60], [52, 92, 20], [56, 84, -64], [64, 72, 16], [66, 64, -70], [76, 54, 10], [76, 46, -76],
+];
+const stems = [
+  'M18 120 C22 90 30 60 44 22', 'M30 122 C32 96 42 70 62 40', 'M10 118 C10 92 12 66 20 36', 'M40 124 C46 104 58 86 76 70',
+];
+const heads = [
+  [44, 22], [40, 30], [48, 28], [37, 40], [62, 40], [58, 47], [66, 48], [54, 56], [20, 36], [16, 46], [24, 46], [14, 58], [76, 70], [70, 74], [78, 78],
+];
+---
+{kind === 'stamp' ? (
+  <svg class:list={['decor', className]} viewBox="0 0 196 152" aria-hidden="true" focusable="false">
+    <defs>
+      <mask id="stamp-perf">
+        <rect x="0" y="0" width="196" height="152" fill="#fff" />
+        {holes.map(([x, y]) => <circle cx={x} cy={y} r="2.6" fill="#000" />)}
+      </mask>
+    </defs>
+    <g transform="rotate(-8 60 76)">
+      <rect x="10" y="14" width="100" height="124" fill="#fbf4e8" stroke="currentColor" stroke-width="1.2" mask="url(#stamp-perf)" />
+      <rect x="20" y="24" width="80" height="104" fill="none" stroke="currentColor" stroke-width="1" />
+      <g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M34 120 C46 96 62 70 86 36" />
+        {leaves.map(([x, y, r]) => (
+          <g transform={`translate(${x} ${y}) rotate(${r})`}>
+            <path d="M0 0 C6 -6 18 -6 24 0 C18 6 6 6 0 0Z" />
+            <path d="M2 0 L21 0" stroke-width="0.7" />
+          </g>
+        ))}
+      </g>
+    </g>
+    <g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.85">
+      {[44, 54, 64, 74, 84].map((y) => (
+        <path d={`M92 ${y} q10 -6 20 0 t20 0 t20 0 t20 0 t20 0`} />
+      ))}
+    </g>
+  </svg>
+) : (
+  <svg class:list={['decor', 'decor--flowers', className]} viewBox="0 0 90 130" aria-hidden="true" focusable="false">
+    <g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+      {stems.map((d) => <path d={d} />)}
+      <path d="M26 98 l-10 -8 M34 84 l10 -6 M14 90 l-8 -6 M52 92 l8 -10" />
+    </g>
+    <g fill="currentColor">
+      {heads.map(([x, y], i) => <ellipse cx={x} cy={y} rx="3.4" ry="2.2" transform={`rotate(${(i * 37) % 180} ${x} ${y})`} />)}
+    </g>
+  </svg>
+)}
+
+<style>
+  .decor {
+    color: #6f5640;
+    pointer-events: none;
+    user-select: none;
+  }
+  .decor--flowers {
+    color: #c39a5c;
+  }
+</style>
