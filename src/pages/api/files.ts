@@ -20,7 +20,8 @@ export const GET: APIRoute = async ({ url }) => {
   }
   const headers = {
     'Content-Type': 'application/pdf',
-    'Content-Disposition': `attachment; filename="${name.replace(/[^\w.-]/g, '_')}"`,
+    // inline=1: shown in the My trip viewer instead of downloaded (does not affect who may access it).
+    'Content-Disposition': `${url.searchParams.get('inline') === '1' ? 'inline' : 'attachment'}; filename="${name.replace(/[^\w.-]/g, '_')}"`,
     'Cache-Control': 'no-store, private',
     'X-Content-Type-Options': 'nosniff',
   };

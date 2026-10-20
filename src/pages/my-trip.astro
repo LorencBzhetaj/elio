@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHeader from '../components/content/PageHeader.astro';
 import Icon from '../components/Icon.astro';
 import { loadContent } from '../features/content/queries';
+import '../styles/map-card.css'; // shared small buttons (.mbtn)
 
 const content = await loadContent();
 // Destinations and saved places (place:<slug>) share one list.
@@ -12,8 +13,23 @@ const destinations = [
 ];
 ---
 <BaseLayout title="My trip" noindex description="Your saved Albania trip, day by day. Stored on this device.">
-  <PageHeader title="My trip" note="Your Albania, your order." intro="Arrange saved destinations day by day. Use the arrow buttons to reorder or move a place to another day." />
+  <PageHeader title="My trip" note="Your Albania, your order." intro="Your guides and your plan in one place." />
   <div class="container narrow section" style="padding-top: 8px">
+    <!-- Purchased guides for the buyer signed in on this browser (loaded privately, never in the HTML). -->
+    <section id="guides" class="mt-guides" aria-labelledby="guides-h" data-guides>
+      <h2 id="guides-h" class="mt-h2">Your guides</h2>
+      <div class="notice notice--warn" data-download-error hidden role="alert">
+        <p>That file isn’t available right now. Try again, or contact support with your order reference.</p>
+      </div>
+      <div data-guides-body aria-live="polite">
+        <p class="muted">Checking for your guides…</p>
+      </div>
+    </section>
+
+    <!-- Free plan: places saved on this device, arranged day by day. -->
+    <section class="mt-plan" aria-labelledby="plan-h" data-plan hidden>
+    <h2 id="plan-h" class="mt-h2">Your free plan</h2>
+    <p class="muted mt-plan__intro">Arrange saved places day by day. Use the arrow buttons to reorder or move a place to another day.</p>
     <p class="notice notice--warn trip-storage">
       <Icon name="info" size={18} /> Saved in this browser on this device only — not synced, and removed if you clear browser data.
     </p>
@@ -26,6 +42,7 @@ const destinations = [
       <a class="btn btn--sm" href="/plan"><Icon name="sparkle" size={16} /> Find destinations</a>
       <button type="button" class="btn btn--ghost btn--sm" id="reset-trip"><Icon name="trash" size={16} /> Start over</button>
     </div>
+    </section>
   </div>
   <script type="application/json" id="destinations-data" set:html={JSON.stringify(destinations)} />
 </BaseLayout>
@@ -66,11 +83,13 @@ const destinations = [
   function render(focusId?: string) {
     root.replaceChildren();
     const total = trip.days.reduce((n, d) => n + d.destinationIds.length, 0);
+    // Nothing saved yet: the guides section already offers "Plan a free trip".
+    document.querySelector<HTMLElement>('[data-plan]')!.hidden = total === 0 && trip.days.length === 1;
     if (total === 0) {
       root.append(
         el('div', { className: 'card trip-empty' },
-          el('h2', {}, 'Your trip is empty'),
-          el('p', { className: 'muted' }, 'Add destinations from any destination page, or find ideas with the planner.'),
+          el('h3', {}, 'No places saved yet'),
+          el('p', { className: 'muted' }, 'Add destinations from any destination page, or find ideas with the free planner.'),
           Object.assign(el('a', { className: 'btn', href: '/destinations' }, 'Browse destinations')),
         ),
       );
@@ -133,7 +152,86 @@ const destinations = [
   });
 </script>
 
+<script>
+  import { initMyGuides } from '../features/trip/guides-ui';
+  const section = document.querySelector<HTMLElement>('[data-guides]');
+  if (section) initMyGuides(section);
+</script>
+
 <style>
+  .mt-h2 {
+    font-size: var(--step-2);
+    margin: 8px 0 12px;
+  }
+  .mt-guides {
+    margin-bottom: 36px;
+    scroll-margin-top: calc(var(--header-h) + 16px);
+  }
+  .mt-plan__intro {
+    margin-top: -4px;
+  }
+  [data-plan][hidden],
+  [data-download-error][hidden] {
+    display: none;
+  }
+  .mt-guides :global(.mt-empty) {
+    padding: clamp(18px, 3vw, 28px);
+  }
+  .mt-guides :global(.mt-empty__title) {
+    font-size: var(--step-2);
+    margin: 0 0 6px;
+  }
+  .mt-guides :global(.mt-empty__actions) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 14px 0 10px;
+  }
+  .mt-guides :global(.mt-small) {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin: 4px 0 0;
+  }
+  .mt-guides :global(.mt-list) {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .mt-guides :global(.mt-guide) {
+    padding: 16px 18px;
+  }
+  .mt-guides :global(.mt-guide__title) {
+    font-size: var(--step-1);
+    margin: 0;
+  }
+  .mt-guides :global(.mt-guide__actions) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .mt-guides :global(.mt-guide__actions [aria-pressed='true']) {
+    background: var(--burgundy);
+    border-color: var(--burgundy);
+    color: #fff;
+  }
+  .mt-guides :global(.mt-viewer) {
+    display: block;
+    width: 100%;
+    height: min(78vh, 900px);
+    border: 1px solid var(--sand);
+    border-radius: var(--radius);
+    background: #fff;
+  }
+  .mt-guides :global(.mt-viewer__caption) {
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+  .mt-guides :global(.mt-signout) {
+    margin-top: 12px;
+  }
   .trip-storage {
     display: flex;
     gap: 10px;

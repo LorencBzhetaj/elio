@@ -94,6 +94,8 @@ const showRegion = regions.length >= 2;
       // On phones the hero field opens the full-screen search dialog instead of a dropdown.
       const toDialog = (e: Event) => {
         if (!mobile.matches) return;
+        // Focus coming back after the dialog closed must not reopen it.
+        if (document.documentElement.hasAttribute('data-search-closing')) return;
         e.preventDefault();
         input.blur();
         window.dispatchEvent(new CustomEvent('search:open', { detail: { query: input.value, opener: input } }));

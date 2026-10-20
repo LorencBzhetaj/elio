@@ -218,8 +218,10 @@ const config = { groups, sorts, defaultSort, items, noun, listId };
     font-size: var(--step-1);
     margin: 0;
   }
+  /* flex-basis auto + min-height 0: iOS Safari collapsed a flex:1 body to zero height in the sheet. */
   .fpanel__body {
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 8px 20px;

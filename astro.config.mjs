@@ -33,6 +33,9 @@ export default defineConfig({
   ],
   image: { responsiveStyles: true },
   vite: {
+    // MapLibre is imported lazily; pre-bundle it at dev-server start so Vite never re-optimises it
+    // mid-session ("Outdated Optimize Dep" errors). Production builds are unaffected.
+    optimizeDeps: { include: ['maplibre-gl'] },
     server: {
       // The dev server would otherwise serve any project file by path. Private guides and the
       // embedded dev database must never be reachable that way.

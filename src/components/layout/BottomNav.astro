@@ -5,8 +5,8 @@ const path = Astro.url.pathname;
 const items: { href: string; label: string; icon: IconName; match: string[] }[] = [
   { href: '/', label: 'Home', icon: 'home', match: ['/'] },
   { href: '/destinations', label: 'Destinations', icon: 'pin', match: ['/destinations', '/photo-spots'] },
-  { href: '/guides', label: 'Guides', icon: 'book', match: ['/guides', '/my-guides', '/checkout', '/order'] },
-  { href: '/my-trip', label: 'My trip', icon: 'calendar', match: ['/my-trip', '/plan'] },
+  { href: '/guides', label: 'Guides', icon: 'book', match: ['/guides', '/checkout', '/order'] },
+  { href: '/my-trip', label: 'My trip', icon: 'calendar', match: ['/my-trip', '/plan', '/my-guides'] },
 ];
 const active = (m: string[]) => m.some((p) => (p === '/' ? path === '/' : path === p || path.startsWith(p + '/')));
 ---

@@ -38,10 +38,10 @@ const inFlight = loaded?.detail.attempts.some((a) => ['created', 'creating', 'pe
             <h1>Your guide is ready.</h1>
             <p>Thank you! Your payment is confirmed. We’re also emailing an access link to <strong>{loaded.order.buyerEmail}</strong>.</p>
             {loaded.session ? (
-              <a class="btn" href="/my-guides">Open my guides <Icon name="arrow-right" size={18} /></a>
+              <a class="btn" href="/my-trip#guides">Open in My trip <Icon name="arrow-right" size={18} /></a>
             ) : (
               <form method="post" action={`/api/orders/${ref}/claim`}>
-                <button class="btn" type="submit">Open my guides <Icon name="arrow-right" size={18} /></button>
+                <button class="btn" type="submit">Open in My trip <Icon name="arrow-right" size={18} /></button>
               </form>
             )}
             <p class="muted ord__small"><Icon name="mail" size={16} /> Didn’t get the email? Check spam, or <a href="/access">request a new link</a>.</p>

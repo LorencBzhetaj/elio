@@ -54,6 +54,9 @@ import SearchBox from './SearchBox.astro';
       if (e.target === dialog) dialog.close(); // backdrop (desktop)
     });
     dialog.addEventListener('close', () => {
+      // Returning focus to the hero field must not reopen the dialog (see SearchBox).
+      document.documentElement.setAttribute('data-search-closing', '');
+      setTimeout(() => document.documentElement.removeAttribute('data-search-closing'), 400);
       document.documentElement.classList.remove('search-open');
       document.body.style.top = '';
       window.scrollTo({ top: scrollY, behavior: 'instant' });

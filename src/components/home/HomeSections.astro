@@ -1,15 +1,18 @@
 ---
-/** Everything below the hero. Identical for Hero A and Hero B so the client compares only the hero. */
-import DestinationCard from '../cards/DestinationCard.astro';
-import GuideCard from '../cards/GuideCard.astro';
-import SpotCard from '../cards/SpotCard.astro';
-import ArticleCard from '../cards/ArticleCard.astro';
+/**
+ * Everything below the hero, identical for Hero A and Hero B so the client compares only the hero.
+ * Layout follows the mobile reference (rows of three cards on phones, category circles, "Plan your
+ * trip" tiles, closing banner). Sections that would need invented data — ratings, reviews, priced
+ * experiences, "100+" claims — are intentionally left out.
+ */
 import Photo from '../media/Photo.astro';
-import Icon from '../Icon.astro';
+import Icon, { type IconName } from '../Icon.astro';
+import Branch from '../decor/Branch.astro';
 import MapPreview from '../map/MapPreview.astro';
 import type { ContentBundle } from '../../features/content/schemas';
 import type { CatalogPrice } from '../../features/commerce/catalog';
 import { upcomingEvents, formatEventDate } from '../../features/content/events';
+import { formatMoney } from '../../features/commerce/money';
 
 interface Props {
   content: ContentBundle;
@@ -21,94 +24,206 @@ const featured = [...content.destinations].sort((a, b) => Number(b.featured) - N
 const tagFor = (types: string[]) => (types.includes('coast') ? 'Coast' : types.includes('mountains') ? 'Nature' : types.includes('historic-town') ? 'Heritage' : 'City');
 const guides = content.guides.slice(0, 3);
 const spots = content.places.slice(0, 3);
-const [lead, ...rest] = content.articles;
+const stories = content.articles.slice(0, 3);
 const events = upcomingEvents(content.events).slice(0, 3);
+const essentials = content.essentials.slice(0, 4);
+
+const categories: { label: string; icon: IconName; href: string }[] = [
+  { label: 'Beaches', icon: 'umbrella', href: '/destinations?experience=beach' },
+  { label: 'Mountains', icon: 'mountain', href: '/destinations?experience=nature' },
+  { label: 'Historic towns', icon: 'landmark', href: '/destinations?experience=culture' },
+  { label: 'Food', icon: 'utensils', href: '/journal?category=food' },
+  { label: 'Hidden gems', icon: 'gem', href: '/photo-spots' },
+  { label: 'Lakes', icon: 'waves', href: '/map?q=lake' },
+  { label: 'Cities', icon: 'building', href: '/destinations?experience=city' },
+  { label: 'Itineraries', icon: 'route', href: '/journal?category=itineraries' },
+];
+const essentialIcon: Record<string, IconName> = { bus: 'bus', bag: 'wallet', 'wifi-off': 'wifi-off', sun: 'sun', info: 'info', compass: 'compass' };
 ---
-<section class="section" aria-labelledby="h-dest">
+<!-- Popular destinations: three across on phones, four on wider screens -->
+<section class="hs" aria-labelledby="h-dest">
   <div class="container">
     <div class="section-head">
-      <h2 id="h-dest">Find your Albania</h2>
+      <h2 id="h-dest">Popular destinations</h2>
       <span class="section-head__rule" aria-hidden="true"></span>
       <a class="section-head__link" href="/destinations">View all <Icon name="arrow-right" size={18} /></a>
     </div>
-    <ul class="grid home-dest" role="list">
-      {featured.map((d, i) => <li><DestinationCard destination={d} tag={i === 0 ? 'Featured' : tagFor(d.types)} seed={i + 11} /></li>)}
+    <ul class="hs-row hs-row--dest" role="list">
+      {featured.map((d, i) => (
+        <li class="dtile">
+          <Photo image={d.cover} ratio="4 / 5" seed={i + 11} sizes="(max-width: 767px) 33vw, 25vw" hideLabel />
+          <span class="dtile__shade" aria-hidden="true"></span>
+          <span class="chip dtile__tag">{i === 0 ? 'Featured' : tagFor(d.types)}</span>
+          <span class="dtile__body">
+            <a class="dtile__title" href={`/destinations/${d.slug}`}>{d.title}</a>
+            <span class="dtile__kicker">{d.kicker}</span>
+          </span>
+          <span class="dtile__go" aria-hidden="true"><Icon name="arrow-right" size={16} /></span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<!-- Free vs premium, as a compact banner -->
+<section class="hs" aria-labelledby="h-guides-banner">
+  <div class="container">
+    <div class="hbanner">
+      <svg class="hbanner__art" viewBox="0 0 120 90" aria-hidden="true" focusable="false">
+        <path d="M18 80V44l16-12 16 12v36M50 80V34l14-14 14 14v46" fill="none" stroke="currentColor" stroke-width="1.6" />
+        <path d="M10 80h100M60 56h8v24h-8z" fill="none" stroke="currentColor" stroke-width="1.6" />
+      </svg>
+      <div class="hbanner__copy">
+        <h2 id="h-guides-banner" class="hbanner__title">Ready-made plans when you want them.</h2>
+        <p>Everything practical on this site is free. Our digital guides add day-by-day plans and map links.</p>
+      </div>
+      <a class="btn btn--sm" href="/guides">Browse guides <Icon name="arrow-right" size={16} /></a>
+    </div>
+  </div>
+</section>
+
+<!-- Explore by category -->
+<section class="hs" aria-labelledby="h-cat">
+  <div class="container hs-rel">
+    <Branch class="hs-sprig" flip />
+    <div class="section-head">
+      <h2 id="h-cat">Explore by category</h2>
+    </div>
+    <ul class="cats" role="list">
+      {categories.map((c) => (
+        <li>
+          <a class="cat" href={c.href}>
+            <span class="cat__icon"><Icon name={c.icon} size={24} /></span>
+            <span class="cat__label">{c.label}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<!-- Hidden gems (photo spots) -->
+{spots.length > 0 && (
+  <section class="hs" aria-labelledby="h-spots">
+    <div class="container">
+      <div class="section-head">
+        <h2 id="h-spots">Hidden gems</h2>
+        <span class="section-head__rule" aria-hidden="true"></span>
+        <a class="section-head__link" href="/photo-spots">View all <Icon name="arrow-right" size={18} /></a>
+      </div>
+      <ul class="hs-row" role="list">
+        {spots.map((p, i) => (
+          <li class="dtile">
+            <Photo image={p.cover} ratio="4 / 5" seed={i + 31} sizes="(max-width: 767px) 33vw, 30vw" hideLabel />
+            <span class="dtile__shade" aria-hidden="true"></span>
+            <span class="dtile__body">
+              <a class="dtile__title" href={`/photo-spots/${p.slug}`}>{p.title}</a>
+              <span class="dtile__kicker">{p.kind === 'beach' ? 'Beach' : p.kind === 'viewpoint' ? 'Viewpoint' : 'Photo spot'}</span>
+            </span>
+            <span class="dtile__go" aria-hidden="true"><Icon name="arrow-right" size={16} /></span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}
+
+<!-- Free planner prompt -->
+<section class="hs" aria-labelledby="h-plan">
+  <div class="container">
+    <div class="hbanner hbanner--plan">
+      <svg class="hbanner__art" viewBox="0 0 120 90" aria-hidden="true" focusable="false">
+        <path d="M8 70c20-16 34 6 54-8s30-30 50-22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 5" />
+        <path d="M100 18c0 9-10 18-10 18S80 27 80 18a10 10 0 0 1 20 0z" fill="none" stroke="currentColor" stroke-width="1.6" />
+        <circle cx="90" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="1.6" />
+      </svg>
+      <div class="hbanner__copy">
+        <h2 id="h-plan" class="hbanner__title">Not sure where to start?</h2>
+        <p>Plan a free trip: pick your days and interests, then arrange places day by day. Saved on your device.</p>
+      </div>
+      <a class="btn btn--sm" href="/plan">Plan a free trip <Icon name="arrow-right" size={16} /></a>
+    </div>
+  </div>
+</section>
+
+<!-- Travel guides -->
+<section class="hs" aria-labelledby="h-guides">
+  <div class="container">
+    <div class="section-head">
+      <h2 id="h-guides">Travel guides</h2>
+      <span class="section-head__rule" aria-hidden="true"></span>
+      <a class="section-head__link" href="/guides">View all <Icon name="arrow-right" size={18} /></a>
+    </div>
+    <ul class="hs-row" role="list">
+      {guides.map((g, i) => {
+        const p = prices?.get(g.productSlug);
+        return (
+          <li class="ctile">
+            <div class="ctile__media">
+              <Photo image={g.cover} ratio="4 / 3" seed={i + 21} sizes="(max-width: 767px) 33vw, 30vw" hideLabel />
+              {p && <span class="ctile__price">{formatMoney(p.amountMinor, p.currency)}</span>}
+              <span class="ctile__badge" aria-hidden="true"><Icon name="file" size={16} /></span>
+            </div>
+            <div class="ctile__body">
+              <a class="ctile__title" href={`/guides/${g.slug}`}>{g.title}</a>
+              <span class="ctile__sub">{g.subtitle}</span>
+            </div>
+          </li>
+        );
+      })}
     </ul>
   </div>
 </section>
 
 <MapPreview />
 
-<section class="section section--tint" aria-labelledby="h-free">
-  <div class="container">
-    <div class="section-head">
-      <h2 id="h-free">Start free. Go deeper.</h2>
-      <span class="section-head__rule" aria-hidden="true"></span>
-      <a class="section-head__link" href="/guides">All guides <Icon name="arrow-right" size={18} /></a>
-    </div>
-    <div class="home-free">
-      <div class="card home-free__card">
-        <span class="chip">Free</span>
-        <h3>Everything you need to start</h3>
-        <ul class="home-free__list">
-          <li><Icon name="pin" /><a href="/destinations">Destination pages</a></li>
-          <li><Icon name="compass" /><a href="/essentials">Transport, money &amp; connectivity</a></li>
-          <li><Icon name="camera" /><a href="/photo-spots">Photo spots</a></li>
-          <li><Icon name="calendar" /><a href="/events">Events</a></li>
-          <li><Icon name="list" /><a href="/plan">Trip planner (saved on your device)</a></li>
-        </ul>
-        <p class="muted home-free__note">No account, no paywall on practical information.</p>
-      </div>
-      <ul class="grid home-guides" role="list">
-        {guides.map((g, i) => {
-          const p = prices?.get(g.productSlug);
-          return <li><GuideCard guide={g} price={p ? { amountMinor: p.amountMinor, currency: p.currency } : null} seed={i + 21} /></li>;
-        })}
-      </ul>
-    </div>
-  </div>
-</section>
-
-<section class="section" aria-labelledby="h-spots">
-  <div class="container">
-    <div class="section-head">
-      <h2 id="h-spots">The spots worth saving</h2>
-      <span class="section-head__rule" aria-hidden="true"></span>
-      <a class="section-head__link" href="/photo-spots">More spots <Icon name="arrow-right" size={18} /></a>
-    </div>
-    <ul class="grid grid--3" role="list">
-      {spots.map((p, i) => <li><SpotCard place={p} seed={i + 31} /></li>)}
-    </ul>
-  </div>
-</section>
-
-{lead && (
-  <section class="section section--tint" aria-labelledby="h-journal">
+<!-- Stories from the journal (no invented testimonials) -->
+{stories.length > 0 && (
+  <section class="hs" aria-labelledby="h-stories">
     <div class="container">
       <div class="section-head">
-        <h2 id="h-journal">From the journal</h2>
+        <h2 id="h-stories">Travel stories</h2>
         <span class="section-head__rule" aria-hidden="true"></span>
         <a class="section-head__link" href="/journal">View all <Icon name="arrow-right" size={18} /></a>
       </div>
-      <div class="home-journal">
-        <article class="home-journal__lead">
-          <Photo image={lead.cover} seed={41} sizes="(max-width: 767px) 100vw, 55vw" />
-          <div class="home-journal__shade" aria-hidden="true"></div>
-          <div class="home-journal__body">
-            <span class="chip">{lead.category}</span>
-            <h3><a href={`/journal/${lead.slug}`}>{lead.title}</a></h3>
-            <p>{lead.summary}</p>
-          </div>
-        </article>
-        <ul class="home-journal__list" role="list">
-          {rest.slice(0, 3).map((a, i) => <li><ArticleCard article={a} seed={i + 42} /></li>)}
-        </ul>
-      </div>
+      <ul class="hs-row" role="list">
+        {stories.map((a, i) => (
+          <li class="ctile">
+            <div class="ctile__media"><Photo image={a.cover} ratio="4 / 3" seed={i + 42} sizes="(max-width: 767px) 33vw, 30vw" hideLabel /></div>
+            <div class="ctile__body">
+              <a class="ctile__title" href={`/journal/${a.slug}`}>{a.title}</a>
+              <span class="ctile__sub">{a.category}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   </section>
 )}
 
-<section class="section" aria-labelledby="h-events">
+<!-- Plan your trip: practical essentials -->
+<section class="hs" aria-labelledby="h-essentials">
+  <div class="container hs-rel">
+    <Branch class="hs-sprig" flip />
+    <div class="section-head">
+      <h2 id="h-essentials">Plan your trip</h2>
+    </div>
+    <ul class="ess" role="list">
+      {essentials.map((e) => (
+        <li>
+          <a class="ess__tile" href={`/essentials/${e.slug}`}>
+            <Icon name={essentialIcon[e.icon] ?? 'info'} size={24} />
+            <span class="ess__title">{e.title}</span>
+            <span class="ess__sub">{e.summary}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<!-- Events: only real, sourced events; otherwise a short honest note -->
+<section class="hs" aria-labelledby="h-events">
   <div class="container">
     <div class="section-head">
       <h2 id="h-events">What’s on</h2>
@@ -116,36 +231,32 @@ const events = upcomingEvents(content.events).slice(0, 3);
       <a class="section-head__link" href="/events">All events <Icon name="arrow-right" size={18} /></a>
     </div>
     {events.length > 0 ? (
-      <ul class="grid grid--3" role="list">
+      <ul class="hs-row" role="list">
         {events.map((e) => (
-          <li class="card home-event">
+          <li class="card hs-event">
             <p class="eyebrow">{formatEventDate(e)}</p>
-            <h3><a href={`/events#${e.slug}`}>{e.title}</a></h3>
-            <p class="muted">{e.summary}</p>
+            <a class="ctile__title" href={`/events#${e.slug}`}>{e.title}</a>
           </li>
         ))}
       </ul>
     ) : (
-      <div class="notice">
-        <p><strong>No upcoming events listed yet.</strong> We only publish events with an organiser source and a recent check date.</p>
-      </div>
+      <p class="muted hs-note">No upcoming events listed yet — we only publish events with an organiser source and a recent check date.</p>
     )}
   </div>
 </section>
 
-<section class="section" aria-labelledby="h-plan">
+<!-- Closing banner -->
+<section class="hs" aria-labelledby="h-diff">
   <div class="container">
-    <div class="home-plan card">
-      <svg class="home-plan__art" viewBox="0 0 120 90" aria-hidden="true" focusable="false">
-        <path d="M10 80 L10 40 L30 25 L50 40 L50 80Z M50 80 L50 30 L70 12 L90 30 L90 80Z" fill="none" stroke="currentColor" stroke-width="1.5" />
-        <path d="M5 80 H115" stroke="currentColor" stroke-width="1.5" />
-        <rect x="64" y="50" width="12" height="30" fill="none" stroke="currentColor" stroke-width="1.5" />
-      </svg>
-      <div>
-        <h2 id="h-plan" class="home-plan__title">Save places. Shape your days.</h2>
-        <p class="muted">Collect destinations and arrange them day by day. Your plan stays on this device — no account needed.</p>
+    <div class="closing">
+      <Photo image={{ alt: 'Stone tower in the mountains', scene: 'mountains', rights: 'placeholder' }} seed={77} sizes="100vw" hideLabel />
+      <span class="closing__shade" aria-hidden="true"></span>
+      <img class="closing__stamp" src="/brand/albania-stamp.webp" alt="" aria-hidden="true" width="520" height="293" loading="lazy" decoding="async" />
+      <div class="closing__body">
+        <h2 id="h-diff" class="closing__eyebrow">Explore Albania differently</h2>
+        <p class="closing__title">More than a destination. A deeper connection.</p>
+        <a class="btn btn--sm" href="/destinations">Start exploring <Icon name="arrow-right" size={16} /></a>
       </div>
-      <a class="btn" href="/plan">Start planning <Icon name="arrow-right" size={18} /></a>
     </div>
   </div>
 </section>
@@ -156,154 +267,351 @@ const events = upcomingEvents(content.events).slice(0, 3);
     margin: 0;
     padding: 0;
   }
-  .home-dest {
-    grid-template-columns: repeat(4, 1fr);
+  .hs {
+    padding-block: clamp(18px, 3.5vw, 40px);
   }
-  @media (max-width: 1023.98px) {
-    .home-dest {
-      grid-template-columns: repeat(2, 1fr);
+  .hs-rel {
+    position: relative;
+  }
+  /* Phones: title and "View all" stay on one line, as in the reference. */
+  @media (max-width: 767.98px) {
+    .hs :global(.section-head) {
+      flex-wrap: nowrap;
+      gap: 10px;
+    }
+    .hs :global(.section-head h2) {
+      font-size: clamp(1.35rem, 1rem + 2vw, 1.9rem);
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+    .hs :global(.section-head__link) {
+      font-size: 1.2rem;
+      flex: none;
     }
   }
-  .home-free {
+  .hs :global(.hs-sprig) {
+    position: absolute;
+    right: calc(var(--gutter) - 6px);
+    top: -48px;
+    width: clamp(40px, 6vw, 72px);
+    z-index: 0;
+    height: auto;
+    opacity: 0.5;
+  }
+
+  /* Rows of three on phones (as in the reference); destinations show four on wider screens. */
+  .hs-row {
     display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 24px;
-    align-items: start;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(8px, 2vw, 24px);
   }
-  @media (max-width: 1179.98px) {
-    .home-free {
-      grid-template-columns: 1fr;
-    }
-  }
-  .home-free__card {
-    padding: 24px;
-  }
-  .home-free__card h3 {
-    margin-top: 12px;
-  }
-  .home-free__list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 12px;
-    display: grid;
-    gap: 4px;
-  }
-  .home-free__list li {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 40px;
-  }
-  .home-free__list :global(.icon) {
-    color: var(--burgundy);
-    flex: none;
-  }
-  .home-free__note {
-    font-size: 0.9rem;
-    margin: 0;
-  }
-  .home-guides {
-    grid-template-columns: repeat(3, 1fr);
+  .hs-row--dest {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   @media (max-width: 767.98px) {
-    .home-guides {
-      grid-template-columns: 1fr;
+    .hs-row--dest {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .hs-row--dest > li:nth-child(n + 4) {
+      display: none;
     }
   }
-  @media (min-width: 768px) and (max-width: 1023.98px) {
-    .home-guides {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-  .home-journal {
-    display: grid;
-    grid-template-columns: 1.1fr 1fr;
-    gap: 24px;
-  }
-  @media (max-width: 899.98px) {
-    .home-journal {
-      grid-template-columns: 1fr;
-    }
-  }
-  .home-journal__lead {
+
+  /* Image tile with title over the photo */
+  .dtile {
     position: relative;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius);
     overflow: hidden;
-    min-height: 360px;
-    color: var(--white);
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-sm);
+    color: #fff;
+    isolation: isolate;
   }
-  .home-journal__lead > :global(.photo) {
+  .dtile:has(a:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .dtile__shade {
     position: absolute;
-    inset: 0;
+    inset: 40% 0 0 0;
+    background: linear-gradient(180deg, rgb(20 14 12 / 0) 0%, rgb(20 14 12 / 0.75) 100%);
   }
-  .home-journal__shade {
+  .dtile__tag {
     position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgb(20 14 12 / 0.05) 20%, rgb(20 14 12 / 0.75) 100%);
+    top: 8px;
+    left: 8px;
+    background: rgb(255 253 248 / 0.92);
+    font-size: clamp(0.55rem, 0.45rem + 0.5vw, 0.75rem);
+    padding: 2px 8px;
   }
-  .home-journal__body {
+  .dtile__body {
     position: absolute;
-    left: 24px;
-    right: 24px;
-    bottom: 22px;
+    left: clamp(8px, 1.5vw, 16px);
+    right: clamp(34px, 4vw, 56px);
+    bottom: clamp(8px, 1.4vw, 14px);
+    display: grid;
   }
-  .home-journal__body h3 {
-    color: var(--white);
-    font-size: var(--step-3);
-    margin: 10px 0 6px;
+  .dtile__title {
+    color: #fff;
+    text-decoration: none;
+    font-family: var(--font-display);
+    font-size: clamp(1rem, 0.75rem + 1.1vw, 1.6rem);
+    line-height: 1.05;
   }
-  .home-journal__body h3 a {
-    color: inherit;
+  .dtile__title::after {
+    content: '';
+    position: absolute;
+    inset: -400px;
+  }
+  .dtile__title:focus-visible {
+    outline: none;
+  }
+  .dtile {
+    contain: paint;
+  }
+  .dtile__kicker {
+    font-family: var(--font-display);
+    font-size: clamp(0.68rem, 0.6rem + 0.35vw, 0.95rem);
+    opacity: 0.95;
+  }
+  .dtile__go {
+    position: absolute;
+    right: clamp(6px, 1vw, 12px);
+    bottom: clamp(8px, 1.4vw, 14px);
+    width: clamp(26px, 3vw, 36px);
+    height: clamp(26px, 3vw, 36px);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+  }
+
+  /* Card tile: image on top, text below */
+  .ctile {
+    position: relative;
+    background: var(--paper);
+    border: 1px solid var(--sand);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .ctile:has(a:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .ctile__media {
+    position: relative;
+  }
+  .ctile__price {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--sun);
+    font-weight: 700;
+    font-size: clamp(0.66rem, 0.55rem + 0.4vw, 0.85rem);
+  }
+  .ctile__badge {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgb(255 253 248 / 0.95);
+    color: var(--burgundy);
+    display: grid;
+    place-items: center;
+  }
+  .ctile__body {
+    display: grid;
+    gap: 2px;
+    padding: clamp(6px, 1.2vw, 14px);
+  }
+  .ctile__title {
+    font-family: var(--font-display);
+    font-size: clamp(0.86rem, 0.7rem + 0.6vw, 1.2rem);
+    line-height: 1.15;
+    color: var(--burgundy-dark);
     text-decoration: none;
   }
-  .home-journal__body h3 a::after {
+  .ctile__title::after {
     content: '';
     position: absolute;
     inset: 0;
   }
-  .home-journal__lead:has(a:focus-visible) {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
+  .ctile__title:focus-visible {
+    outline: none;
   }
-  .home-journal__body p {
-    margin: 0;
-    max-width: 50ch;
+  .ctile__sub {
+    font-size: clamp(0.68rem, 0.6rem + 0.3vw, 0.9rem);
+    color: var(--muted);
+    text-transform: capitalize;
+    line-height: 1.3;
   }
-  .home-journal__list {
+
+  /* Banners */
+  .hbanner {
     display: grid;
-    gap: 14px;
-  }
-  .home-event {
-    padding: 20px;
-  }
-  .home-plan {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 24px;
-    padding: 24px 28px;
-    background: linear-gradient(100deg, var(--paper), var(--cream-deep));
+    gap: clamp(10px, 2vw, 24px);
+    padding: clamp(14px, 2.4vw, 24px) clamp(14px, 3vw, 28px);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(100deg, #fbecd9, var(--cream-deep));
+    border: 1px solid var(--sand);
   }
-  .home-plan__art {
-    width: 110px;
+  .hbanner__art {
+    width: clamp(64px, 10vw, 110px);
     color: var(--burgundy);
-    opacity: 0.6;
+    opacity: 0.55;
   }
-  .home-plan__title {
-    font-size: var(--step-2);
-    margin-bottom: 4px;
+  .hbanner__title {
+    font-size: clamp(1.1rem, 0.9rem + 1vw, 1.7rem);
+    margin: 0 0 4px;
   }
-  .home-plan p {
+  .hbanner__copy p {
     margin: 0;
+    font-size: clamp(0.8rem, 0.72rem + 0.35vw, 1rem);
+    color: var(--muted);
   }
-  @media (max-width: 767.98px) {
-    .home-plan {
-      grid-template-columns: 1fr;
-      text-align: left;
+  @media (max-width: 599.98px) {
+    .hbanner {
+      grid-template-columns: auto minmax(0, 1fr);
     }
-    .home-plan__art {
+    .hbanner .btn {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+  }
+
+  /* Category circles: four per row */
+  .cats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(12px, 2vw, 24px) clamp(6px, 2vw, 24px);
+  }
+  @media (min-width: 900px) {
+    .cats {
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+  }
+  .cat {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    text-align: center;
+    color: var(--ink);
+    text-decoration: none;
+    font-size: clamp(0.74rem, 0.68rem + 0.3vw, 0.95rem);
+    line-height: 1.2;
+    min-height: 44px;
+  }
+  .cat__icon {
+    width: clamp(52px, 6vw, 64px);
+    height: clamp(52px, 6vw, 64px);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--burgundy-tint);
+    color: var(--burgundy);
+    transition: transform 0.15s ease;
+  }
+  .cat:hover .cat__icon {
+    transform: translateY(-2px);
+  }
+
+  /* Plan your trip: four tiles in a row */
+  .ess {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(6px, 1.5vw, 20px);
+  }
+  .ess__tile {
+    display: grid;
+    gap: 4px;
+    height: 100%;
+    padding: clamp(8px, 1.6vw, 18px);
+    border-radius: var(--radius);
+    background: var(--paper);
+    border: 1px solid var(--sand);
+    color: var(--ink);
+    text-decoration: none;
+    align-content: start;
+  }
+  .ess__tile :global(.icon) {
+    color: var(--burgundy);
+  }
+  .ess__title {
+    font-family: var(--font-display);
+    font-size: clamp(0.8rem, 0.66rem + 0.6vw, 1.15rem);
+    line-height: 1.15;
+    color: var(--burgundy-dark);
+  }
+  .ess__sub {
+    font-size: clamp(0.64rem, 0.58rem + 0.3vw, 0.85rem);
+    color: var(--muted);
+    line-height: 1.3;
+  }
+  @media (max-width: 479.98px) {
+    .ess__sub {
       display: none;
     }
+  }
+
+  .hs-event {
+    padding: 14px;
+  }
+  .hs-note {
+    margin: 0;
+    font-size: 0.92rem;
+  }
+
+  /* Closing banner */
+  .closing {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    min-height: clamp(220px, 32vw, 360px);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    box-shadow: var(--shadow);
+  }
+  .closing > :global(.photo) {
+    position: absolute;
+    inset: 0;
+  }
+  .closing__shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgb(250 245 235 / 0) 25%, rgb(250 245 235 / 0.9) 70%);
+  }
+  /* Stamp over the sky on the left, clear of the text on the right. */
+  .closing__stamp {
+    position: absolute;
+    left: 12px;
+    top: 10px;
+    width: clamp(96px, 16vw, 200px);
+    height: auto;
+    opacity: 0.9;
+  }
+  .closing__body {
+    position: relative;
+    max-width: 60%;
+    padding: clamp(16px, 3vw, 40px);
+    text-align: right;
+  }
+  .closing__eyebrow {
+    font-size: clamp(0.95rem, 0.8rem + 0.6vw, 1.3rem);
+    margin: 0 0 4px;
+  }
+  .closing__title {
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 0.9rem + 1.6vw, 2.4rem);
+    line-height: 1.1;
+    color: var(--ink);
+    margin: 0 0 12px;
   }
 </style>

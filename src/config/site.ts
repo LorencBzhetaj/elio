@@ -57,7 +57,6 @@ export const mainNav = [
 export const secondaryNav = [
   { href: '/plan', label: 'Plan a trip' },
   { href: '/my-trip', label: 'My trip' },
-  { href: '/my-guides', label: 'My guides' },
   { href: '/faq', label: 'FAQ' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },

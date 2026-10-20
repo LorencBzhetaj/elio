@@ -21,5 +21,5 @@ export const POST: APIRoute = async ({ params, cookies, redirect }) => {
   }
   const s = await createSession(db, order.buyerEmail, 'buyer', serverEnv().SESSION_TTL_DAYS);
   setSessionCookie(cookies, s.token, s.expiresAt);
-  return redirect('/my-guides', 303);
+  return redirect('/my-trip#guides', 303);
 };

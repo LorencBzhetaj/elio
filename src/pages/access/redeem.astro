@@ -20,7 +20,7 @@ if (Astro.request.method === 'POST') {
   if (!redeemed) return Astro.redirect('/access?reason=expired', 303);
   const s = await createSession(db, redeemed.email, redeemed.role, serverEnv().SESSION_TTL_DAYS);
   setSessionCookie(Astro.cookies, s.token, s.expiresAt);
-  return Astro.redirect(redeemed.role === 'admin' ? '/admin/orders' : '/my-guides', 303);
+  return Astro.redirect(redeemed.role === 'admin' ? '/admin/orders' : '/my-trip#guides', 303);
 }
 const token = Astro.url.searchParams.get('token') ?? '';
 ---

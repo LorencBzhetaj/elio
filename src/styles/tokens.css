@@ -45,12 +45,16 @@
   --content: 1200px;
   --gutter: clamp(16px, 4vw, 40px);
   --header-h: 68px;
+  /* Large logo over the panorama hero, and the header height it needs. */
+  --logo-hero-h: clamp(76px, 6vw + 40px, 128px);
+  --overlay-h: calc(var(--logo-hero-h) + 16px);
   --bottom-nav-h: 0px;
 }
 
 @media (max-width: 767.98px) {
   :root {
     --header-h: 60px;
+    --logo-hero-h: clamp(58px, 12vw + 18px, 76px);
     --bottom-nav-h: calc(64px + env(safe-area-inset-bottom, 0px));
   }
 }

@@ -14,8 +14,15 @@ const isActive = (href: string) => path === href || path.startsWith(href + '/');
 ---
 <header class:list={['site-header', { 'site-header--overlay': overlay }]}>
   <div class="container site-header__inner">
-    {/* Over the panorama hero, the hero renders the large stacked logo instead. */}
-    {overlay ? <span class="site-header__mobile-logo"><Logo brand={brand} /></span> : <Logo brand={brand} />}
+    {overlay ? (
+      <>
+        <Logo size="hero" brand={brand} />
+        {/* Decorative stamp beside the logo (the hero shows its own copy on wide screens). */}
+        <img class="site-header__stamp" src="/brand/albania-stamp.webp" alt="" aria-hidden="true" width="520" height="293" decoding="async" />
+      </>
+    ) : (
+      <Logo brand={brand} />
+    )}
     <nav class="site-header__nav" aria-label="Main">
       <ul>
         {mainNav.map((item) => (
@@ -65,9 +72,34 @@ const isActive = (href: string) => path === href || path.startsWith(href + '/');
   .site-header__nav {
     margin-left: auto;
   }
-  /* Over the panorama hero the big stacked logo is shown on desktop; phones use the compact one here. */
-  @media (min-width: 768px) {
-    .site-header__mobile-logo {
+  .site-header--overlay .site-header__inner {
+    min-height: var(--overlay-h);
+    align-items: center;
+  }
+  /* Phones: logo, stamp and the two icons always share one row. */
+  @media (max-width: 767.98px) {
+    .site-header--overlay .site-header__inner {
+      flex-wrap: nowrap;
+      gap: 8px;
+    }
+    .site-header__stamp {
+      min-width: 0;
+      flex: 0 1 auto;
+      height: calc(var(--logo-hero-h) * 0.62);
+      margin-left: -4px;
+      object-fit: contain;
+    }
+  }
+  .site-header__stamp {
+    height: calc(var(--logo-hero-h) * 0.72);
+    width: auto;
+    margin-left: -12px;
+    pointer-events: none;
+    user-select: none;
+  }
+  /* Wide screens: the nav needs the room; the hero shows the stamp instead. Tiny phones: no room. */
+  @media (min-width: 1081px), (max-width: 359.98px) {
+    .site-header__stamp {
       display: none;
     }
   }

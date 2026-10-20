@@ -1,0 +1,38 @@
+---
+/**
+ * Hand-drawn style olive branch (original line art) used as a decorative margin detail, as in the
+ * reference. Purely ornamental: aria-hidden, never carries information, never blocks taps.
+ */
+interface Props {
+  class?: string;
+  flip?: boolean;
+}
+const { class: className, flip = false } = Astro.props;
+const leaves = [
+  [58, 30, -38], [70, 52, 32], [52, 70, -42], [66, 92, 30], [46, 110, -46], [60, 132, 26], [40, 150, -50], [52, 172, 22], [32, 188, -54],
+];
+---
+<svg class:list={['branch', className, { 'branch--flip': flip }]} viewBox="0 0 120 220" aria-hidden="true" focusable="false">
+  <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M86 6 C78 48 66 96 50 140 C40 168 28 194 14 214" />
+    {leaves.map(([x, y, r]) => (
+      <g transform={`translate(${x} ${y}) rotate(${r})`}>
+        <path d="M0 0 C10 -10 30 -10 40 0 C30 10 10 10 0 0Z" />
+        <path d="M2 0 L36 0" stroke-width="0.9" />
+      </g>
+    ))}
+    <circle cx="74" cy="40" r="3.2" />
+    <circle cx="58" cy="118" r="3" />
+  </g>
+</svg>
+
+<style>
+  .branch {
+    color: #8a6a4a;
+    pointer-events: none;
+    user-select: none;
+  }
+  .branch--flip {
+    transform: scaleX(-1);
+  }
+</style>

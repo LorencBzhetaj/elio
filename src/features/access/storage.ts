@@ -8,7 +8,8 @@ import { hmac, safeEqual } from '../../lib/crypto';
  * - s3: private bucket, short-lived presigned GET URLs.
  */
 export interface PrivateStorage {
-  signedDownloadUrl(objectKey: string, filename: string, ttlSeconds: number): Promise<string>;
+  /** inline = show in the browser (embedded viewer) instead of downloading. */
+  signedDownloadUrl(objectKey: string, filename: string, ttlSeconds: number, opts?: { inline?: boolean }): Promise<string>;
 }
 
 const KEY_RE = /^[a-z0-9][a-z0-9/_.-]{0,200}$/i;
@@ -28,7 +29,7 @@ export function verifyLocalFileSignature(secret: string, key: string, filename: 
 export function createLocalStorage(opts: { dir: string; secret: string; siteUrl: string }): PrivateStorage & { resolve(key: string): string } {
   const root = path.resolve(opts.dir);
   return {
-    async signedDownloadUrl(objectKey, filename, ttlSeconds) {
+    async signedDownloadUrl(objectKey, filename, ttlSeconds, display = {}) {
       assertSafeKey(objectKey);
       const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
       const sig = signLocalFile(opts.secret, objectKey, filename, expires);
@@ -37,6 +38,7 @@ export function createLocalStorage(opts: { dir: string; secret: string; siteUrl:
       url.searchParams.set('name', filename);
       url.searchParams.set('exp', String(expires));
       url.searchParams.set('sig', sig);
+      if (display.inline) url.searchParams.set('inline', '1'); // affects display only, not access
       return url.pathname + url.search;
     },
     resolve(key: string) {
@@ -59,12 +61,12 @@ export async function createS3Storage(opts: { bucket: string; region?: string; e
     credentials: opts.accessKeyId && opts.secretAccessKey ? { accessKeyId: opts.accessKeyId, secretAccessKey: opts.secretAccessKey } : undefined,
   });
   return {
-    async signedDownloadUrl(objectKey, filename, ttlSeconds) {
+    async signedDownloadUrl(objectKey, filename, ttlSeconds, display = {}) {
       assertSafeKey(objectKey);
       const cmd = new GetObjectCommand({
         Bucket: opts.bucket,
         Key: objectKey,
-        ResponseContentDisposition: `attachment; filename="${filename.replace(/[^\w.-]/g, '_')}"`,
+        ResponseContentDisposition: `${display.inline ? 'inline' : 'attachment'}; filename="${filename.replace(/[^\w.-]/g, '_')}"`,
         ResponseCacheControl: 'no-store',
       });
       return getSignedUrl(client, cmd, { expiresIn: ttlSeconds });

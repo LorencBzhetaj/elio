@@ -6,19 +6,18 @@
  */
 import Photo from '../media/Photo.astro';
 import Icon from '../Icon.astro';
-import Logo from '../Logo.astro';
-import Stamp from '../decor/Stamp.astro';
 import SearchBox from '../search/SearchBox.astro';
+import Branch from '../decor/Branch.astro';
 import type { HeroProps } from './types';
 
 type Props = Omit<HeroProps, 'variant'>;
-const { heading, description, media, primaryAction, secondaryAction, tagline, brand } = Astro.props;
+const { heading, description, media, primaryAction, secondaryAction, tagline } = Astro.props;
 const image = media[0];
 const features = [
-  { icon: 'pin', label: 'Free destination info' },
+  { icon: 'pin', label: 'Destinations' },
   { icon: 'route', label: 'Ready-made plans' },
-  { icon: 'compass', label: 'Practical essentials' },
-  { icon: 'book', label: 'Optional digital guides' },
+  { icon: 'compass', label: 'Local tips' },
+  { icon: 'book', label: 'Digital guides' },
 ] as const;
 ---
 <section class="hero-pano" aria-labelledby="hero-heading">
@@ -27,12 +26,12 @@ const features = [
     <div class="hero-pano__fade" aria-hidden="true"></div>
   </div>
 
+  <Branch class="hero-pano__branch" />
   <div class="container hero-pano__content">
     <div class="hero-pano__brand">
-      <Logo variant="stacked" brand={brand} />
       {tagline && <p class="hero-pano__tagline">{tagline}</p>}
     </div>
-    <div class="hero-pano__stamp" aria-hidden="true"><Stamp /></div>
+    <img class="hero-pano__stamp" src="/brand/albania-stamp.webp" alt="" aria-hidden="true" width="520" height="293" decoding="async" />
 
     <div class="hero-pano__copy">
       <h1 id="hero-heading">{heading}</h1>
@@ -63,7 +62,7 @@ const features = [
     z-index: 2; /* keeps the search dropdown above the sections that follow */
     background: var(--cream);
     isolation: isolate;
-    margin-top: calc(-1 * var(--header-h));
+    margin-top: calc(-1 * var(--overlay-h));
   }
   .hero-pano__media {
     position: absolute;
@@ -79,9 +78,20 @@ const features = [
       linear-gradient(90deg, rgb(250 245 235 / 0.94) 0%, rgb(250 245 235 / 0.75) 34%, rgb(250 245 235 / 0) 60%),
       linear-gradient(180deg, rgb(250 245 235 / 0) 55%, var(--cream) 98%);
   }
+  /* Olive-branch line art on the left edge, behind the content. */
+  .hero-pano :global(.hero-pano__branch) {
+    position: absolute;
+    left: -22px;
+    top: calc(var(--overlay-h) + clamp(300px, 34vw, 430px));
+    width: clamp(70px, 8vw, 120px);
+    height: auto;
+    opacity: 0.55;
+    z-index: 0;
+  }
   .hero-pano__content {
     position: relative;
-    padding-top: calc(var(--header-h) + 8px);
+    z-index: 1;
+    padding-top: calc(var(--overlay-h) + 4px);
     padding-bottom: clamp(24px, 4vw, 48px);
     display: grid;
     grid-template-columns: minmax(0, 620px) 1fr;
@@ -101,12 +111,14 @@ const features = [
     max-width: 40ch;
     margin: 10px 0 0;
   }
+  /* Wide screens only (narrower screens show the stamp beside the logo in the header). */
   .hero-pano__stamp {
     position: absolute;
-    right: calc(var(--gutter) + 18%);
-    top: calc(var(--header-h) + 10px);
-    width: 180px;
-    opacity: 0.8;
+    right: calc(var(--gutter) + 16%);
+    top: calc(var(--overlay-h) + 8px);
+    width: 210px;
+    height: auto;
+    pointer-events: none;
   }
   .hero-pano__copy {
     margin-top: clamp(24px, 4vw, 48px);
@@ -175,7 +187,7 @@ const features = [
     color: var(--burgundy);
   }
 
-  @media (max-width: 1023.98px) {
+  @media (max-width: 1080.98px) {
     .hero-pano__stamp {
       display: none;
     }
@@ -194,12 +206,8 @@ const features = [
     }
     .hero-pano__content {
       grid-template-columns: minmax(0, 1fr);
-      padding-top: calc(var(--header-h) + 4px);
+      padding-top: calc(var(--overlay-h) + 2px);
       padding-bottom: 20px;
-    }
-    /* The compact logo sits in the header instead. */
-    .hero-pano__brand :global(.logo) {
-      display: none;
     }
     .hero-pano__tagline {
       display: none;
@@ -231,13 +239,24 @@ const features = [
       white-space: nowrap;
       font-size: 0.95rem;
     }
+    /* Four icons in one straight row, as in the reference. */
     .hero-pano__features {
-      grid-template-columns: repeat(2, 1fr);
-      row-gap: 16px;
-      margin-top: 28px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+      margin-top: 22px;
     }
-    .hero-pano__features li:nth-child(3) {
-      border-left: 0;
+    .hero-pano__features li {
+      font-size: 0.74rem;
+      padding-inline: 2px;
+      overflow-wrap: anywhere;
+    }
+    .hero-pano__ficon {
+      width: 40px;
+      height: 40px;
+    }
+    .hero-pano__ficon :global(svg) {
+      width: 20px;
+      height: 20px;
     }
   }
   @media (max-width: 767.98px) and (max-height: 620px) {

@@ -144,8 +144,8 @@ export function initMapExplorer(root: HTMLElement) {
     } else if (prem) {
       const a = document.createElement('a');
       a.className = 'btn btn--sm';
-      a.href = '/my-guides';
-      a.textContent = 'Open my guides';
+      a.href = '/my-trip#guides';
+      a.textContent = 'Open in My trip';
       fillCard(card, { title: prem.title, meta: `From your ${prem.guide}`, summary: prem.note ?? '', actions: [a] }, () => select(null));
     } else {
       card.hidden = true;
