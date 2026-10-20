@@ -9,7 +9,7 @@
   - **B — Panoramë** krem/bordo “Your Albania story starts here.” (`/preview/hero-b`)
   - Krahasim krah për krah në telefon/tablet/desktop: `/preview`
 - Blerje pa llogari: faqja e guidës → checkout me email → pagesë (tani **e simuluar**) → serveri
-  verifikon pagesën → akses te “My guides” dhe email me link njëpërdorimësh.
+  verifikon pagesën → guida hapet te “My trip” dhe dërgohet email me link njëpërdorimësh.
 - PDF-të ruhen privatisht dhe shkarkohen vetëm pas kontrollit të blerjes, me link që skadon pas 60 sekondash.
 - Paneli i porosive për pronarin: `/admin/orders` (kërkim, sinkronizim me ofruesin, ridërgim emaili, revokim aksesi, histori veprimesh).
 - CMS (Sanity) në dosjen `cms/` për të redaktuar përmbajtjen.
@@ -22,6 +22,15 @@
 - Destinacionet kanë vetëm koordinata të përafërta të qendrës së qytetit, të shënuara “to verify”. Photo spots nuk kanë ende koordinata dhe shfaqen te “Not on the map yet”.
 - Vendet premium të guidave shfaqen në hartë vetëm për blerësit (tani janë 2 pika TEST).
 - Pamjet: `docs/screenshots/`.
+
+## My trip, homepage dhe logo (përditësim 21 tetor 2026)
+
+- **My trip** (`/my-trip`): nëse s'ka blerë guidë, shfaqen vetëm dy butona — “Get your guide” (`/guides`) dhe “Plan a free trip” (`/plan`, versioni falas). Pas blerjes, PDF-ja hapet automatikisht në faqe, me “Open full screen” dhe “Download PDF”. `/my-guides` tani ridrejton këtu.
+- **Secili përdorues sheh vetëm guidat e veta**: identiteti është emaili i blerjes. Pas pagesës shfletuesi merr një cookie sesioni HttpOnly; në pajisje tjetër blerësi kërkon link aksesi me email te `/access`. Asgjë private nuk është në HTML-në publike. Plani falas ruhet vetëm në pajisje.
+- Në iPhone, PDF brenda faqes shfaq vetëm faqen e parë — prandaj ka butonin “Open full screen”.
+- **Logo “Albania Decoded”** lart majtas (lidhet me homepage, `alt="Albania Decoded"`) dhe **vula me shqiponjë** si dekor (`alt=""`, `aria-hidden`). Skedarët: `public/brand/`.
+- **Homepage**: 4 ikonat në një rresht edhe në telefon, 3 karta destinacionesh në rresht, degë ulliri dekorative majtas, seksione sipas referencës. Vlerësimet, numrat (“100+”) dhe recensionet e referencës nuk u shtuan, sepse nuk kemi të dhëna reale.
+- Rregulluar: “Cancel” te kërkimi në telefon dhe paneli i filtrave në iPhone.
 
 ## Si ta nisni në kompjuter
 

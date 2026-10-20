@@ -106,3 +106,17 @@ No horizontal overflow at 320, 360, 390, 768, 1280 px and at 390 px with 200 % t
 
 Not verified: real iOS/Android devices (on-screen keyboard behaviour is handled via `visualViewport`
 but only emulated), a paid tile provider, Lighthouse.
+
+## Update — My trip guides, mobile fixes, homepage, brand (21 October 2026)
+
+- `npm test`: **87 / 87 passed**; `npm run build` + public scan: OK.
+- Playwright, WebKit with iPhone 13 profile + Chromium (`docs/screenshots/5`–`9`), all PASS:
+  - search Cancel closes the dialog (opened from hero field and from header) and it stays closed;
+  - filter bottom sheet body visible (426 px), apply updates the count and closes;
+  - My trip without a guide: only “Get your guide” and “Plan a free trip” (`/plan`), empty plan hidden;
+  - mock purchase lands in My trip; the PDF viewer loads `/api/downloads/…?inline=1` → 200, `application/pdf`, `inline`;
+  - a different browser sees no guide and `/api/me/guides` returns nothing for it;
+  - 4 hero icons on one line, 3 destination cards in one row, no horizontal overflow;
+  - logo `alt="Albania Decoded"` links to `/`; stamp images are `alt=""` + `aria-hidden`.
+- Regression: search/filters/map (15 PASS), homepage map card (12 PASS), hero buttons above the fold at 6 phone sizes (OK).
+- Not verified: a real iOS Safari device (WebKit engine only); PDF rendering inside the frame in headless Chromium (no PDF plugin — headers checked instead).
