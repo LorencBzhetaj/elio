@@ -7,7 +7,6 @@
 import Photo from '../media/Photo.astro';
 import Icon from '../Icon.astro';
 import SearchBox from '../search/SearchBox.astro';
-import PostStamp from '../decor/PostStamp.astro';
 import type { HeroProps } from './types';
 
 type Props = Omit<HeroProps, 'variant'>;
@@ -39,12 +38,13 @@ const features = [
     </div>
 
     <div class="hero-pano__search">
-      <PostStamp kind="flowers" class="hero-pano__flowers" />
+      <picture class="hero-pano__olive">
+        <source srcset="/brand/olive-stamp.webp" type="image/webp" />
+        <img src="/brand/olive-stamp.png" alt="" aria-hidden="true" width="480" height="340" decoding="async" />
+      </picture>
       <SearchBox variant="hero" id="hero-q" />
     </div>
 
-    <div class="hero-pano__lower">
-    <PostStamp class="hero-pano__poststamp" />
     <div class="hero-pano__actions">
       <a class="btn" href={primaryAction.href}>{primaryAction.label} <Icon name="arrow-right" size={18} /></a>
       <a class="btn btn--outline" href={secondaryAction.href}><Icon name="bag" size={18} /> {secondaryAction.label}</a>
@@ -55,7 +55,6 @@ const features = [
         <li><span class="hero-pano__ficon"><Icon name={f.icon} size={22} /></span>{f.label}</li>
       ))}
     </ul>
-    </div>
   </div>
 </section>
 
@@ -72,6 +71,8 @@ const features = [
     inset: 0 0 auto 0;
     height: min(78vh, 720px);
     min-height: 520px;
+    max-height: 100%;
+    overflow: hidden;
     z-index: -1;
   }
   .hero-pano__fade {
@@ -81,33 +82,22 @@ const features = [
       linear-gradient(90deg, rgb(250 245 235 / 0.94) 0%, rgb(250 245 235 / 0.75) 34%, rgb(250 245 235 / 0) 60%),
       linear-gradient(180deg, rgb(250 245 235 / 0) 55%, var(--cream) 98%);
   }
-  /* Reference detail: dried flowers peeking above the search field, and a postage stamp with an
-     olive sprig in a narrow left margin beside the buttons and the four icons. */
+  /* Reference detail: the olive-sprig stamp peeking out above the search field (behind it). */
   .hero-pano__search {
     position: relative;
   }
-  .hero-pano__search :global(.hero-pano__flowers) {
+  .hero-pano__olive {
     position: absolute;
-    left: calc(-1 * var(--gutter) + 2px);
-    bottom: 34%;
-    width: clamp(50px, 5vw, 80px);
-    height: auto;
-    opacity: 0.8;
+    left: calc(-1 * var(--gutter) - 4px);
+    bottom: 45%;
+    width: clamp(104px, 9vw, 140px);
     z-index: -1;
+    pointer-events: none;
   }
-  .hero-pano__lower {
-    --decor-w: clamp(54px, 9vw, 108px);
-    position: relative;
-    grid-column: 1;
-    padding-left: var(--decor-w);
-  }
-  .hero-pano__lower :global(.hero-pano__poststamp) {
-    position: absolute;
-    left: calc(-0.5 * var(--gutter) - 6px);
-    top: 2px;
-    width: calc(var(--decor-w) * 1.75);
+  .hero-pano__olive img {
+    display: block;
+    width: 100%;
     height: auto;
-    z-index: -1;
   }
   .hero-pano__content {
     position: relative;
@@ -252,6 +242,7 @@ const features = [
     }
     .hero-pano__actions {
       margin-top: 12px;
+      justify-content: center;
     }
     .hero-pano__actions .btn {
       flex: 1 1 120px;
@@ -270,7 +261,8 @@ const features = [
     .hero-pano__features li {
       font-size: 0.74rem;
       padding-inline: 2px;
-      overflow-wrap: anywhere;
+      overflow-wrap: normal;
+      hyphens: none;
     }
     .hero-pano__ficon {
       width: 40px;

@@ -86,7 +86,6 @@ const isActive = (href: string) => path === href || path.startsWith(href + '/');
       min-width: 0;
       flex: 0 1 auto;
       height: calc(var(--logo-hero-h) * 0.62);
-      margin-left: -4px;
       object-fit: contain;
     }
   }
@@ -96,6 +95,16 @@ const isActive = (href: string) => path === href || path.startsWith(href + '/');
     margin-left: -12px;
     pointer-events: none;
     user-select: none;
+  }
+  /* Up to 1080px the stamp sits on the right, next to the search and menu buttons. */
+  @media (min-width: 360px) and (max-width: 1080px) {
+    .site-header .site-header__stamp {
+      margin-left: auto;
+      margin-right: 2px;
+    }
+    .site-header__stamp ~ .site-header__actions {
+      margin-left: 0;
+    }
   }
   /* Wide screens: the nav needs the room; the hero shows the stamp instead. Tiny phones: no room. */
   @media (min-width: 1081px), (max-width: 359.98px) {
