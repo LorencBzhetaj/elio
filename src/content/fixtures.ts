@@ -377,6 +377,37 @@ export const fixtures: z.input<typeof contentBundle> = {
 
   guides: [
     {
+      // TEST product for the POK staging payment; contents describe the supplied PDF.
+      slug: 'tirana-3-days',
+      productSlug: 'tirana-3-days',
+      title: '3 Days in Tirana',
+      subtitle: 'The city, decoded — a ready-made 3-day plan.',
+      summary: 'A day-by-day itinerary for Tirana with places to visit, where to eat and practical information.',
+      verified: false,
+      updatedAt: UPDATED,
+      status: 'published',
+      availability: 'available',
+      cover: { alt: 'Guide cover: Tirana city centre at sunset', scene: 'city', rights: 'placeholder', needed: 'Use the guide’s cover artwork' },
+      destinationSlugs: ['tirana'],
+      contents: [
+        { title: 'Your 3-day overview', description: 'Three days, three different sides of Tirana.' },
+        { title: 'Day-by-day itinerary', description: 'Timed plans with places, food stops and evening ideas.' },
+        { title: 'Before you go', description: 'Arriving in Tirana, money and payments, practical tips.' },
+        { title: 'Maps', description: 'Clickable map links for the places in the guide (need internet).' },
+      ],
+      samplePages: [
+        { title: 'Your 3-day overview', caption: 'Inside the guide', image: { alt: 'Sample: overview page', scene: 'city', rights: 'placeholder' } },
+      ],
+      format: 'Downloadable PDF (32 pages)',
+      language: 'English',
+      onlineOffline: 'The PDF works offline once downloaded. Map links open online maps and need an internet connection.',
+      updatePolicy: 'Buyers can open and re-download it any time from My trip.',
+      faq: [
+        { q: 'Do I need an account?', a: 'No. You buy with your email address and we send you a private access link.' },
+        { q: 'What if I lose the email?', a: 'Request a new access link at any time from the Access page with the same email address.' },
+      ],
+    },
+    {
       slug: 'theth-guide',
       productSlug: 'theth-guide',
       title: 'Theth Guide',

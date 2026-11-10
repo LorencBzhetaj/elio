@@ -20,6 +20,8 @@ if (loaded && (await refreshPendingOrder(loaded.detail))) {
 const cancelledReturn = Astro.url.searchParams.has('cancelled');
 const status = loaded?.order.status;
 const canRetry = loaded && ['failed', 'cancelled', 'expired'].includes(status!) ;
+// After "cancel" on the provider page the provider order stays payable until it expires: offer to go back.
+const resumeUrl = loaded?.detail.attempts.find((a) => a.status === 'pending' && a.checkoutUrl)?.checkoutUrl;
 const inFlight = loaded?.detail.attempts.some((a) => ['created', 'creating', 'pending', 'authorized', 'needs_review'].includes(a.status));
 ---
 <BaseLayout title="Your order" noindex>
@@ -56,6 +58,9 @@ const inFlight = loaded?.detail.attempts.some((a) => ['created', 'creating', 'pe
                 ? 'You left the payment page. If you were charged anyway, we’ll detect it and email you. Otherwise nothing has been charged.'
                 : 'We’re waiting for the payment provider to confirm. This usually takes a few seconds. You can keep this page open.'}
             </p>
+            {cancelledReturn && resumeUrl && (
+              <p><a class="btn" href={resumeUrl}>Return to the payment page</a></p>
+            )}
             <p class="muted ord__small" role="status" aria-live="polite" id="poll-status">Checking…</p>
             <p><button class="btn btn--outline btn--sm" type="button" id="refresh" hidden>Check again</button></p>
             <p class="muted ord__small">Still pending after a few minutes? Contact <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a> with reference <strong>{ref}</strong>.</p>

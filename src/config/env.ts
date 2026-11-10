@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const POK_STAGING_URL = 'https://api-staging.pokpay.io';
+
 /**
  * Server-only configuration. Validated lazily so that public, prerendered pages can build
  * without commerce secrets. Never import this module from client scripts.
@@ -11,6 +13,12 @@ const schema = z
     DATABASE_URL: z.string().min(1).default('pglite:./.data/pglite'),
     APP_SECRET: z.string().min(32, 'APP_SECRET must be at least 32 characters'),
     PAYMENT_PROVIDER: z.enum(['mock', 'paysera', 'pok']).default('mock'),
+    /** POK (pokpay.io). Only the staging environment is enabled in this codebase. */
+    POK_ENV: z.enum(['staging', 'production']).default('staging'),
+    POK_API_BASE_URL: z.string().default('https://api-staging.pokpay.io'),
+    POK_MERCHANT_ID: z.string().optional(),
+    POK_KEY_ID: z.string().optional(),
+    POK_KEY_SECRET: z.string().optional(),
     PREVIEW_ACCESS_KEY: z.string().optional(),
     ADMIN_EMAILS: z.string().default(''),
     OWNER_ALERT_EMAIL: z.string().optional(),
@@ -35,6 +43,17 @@ const schema = z
   .superRefine((env, ctx) => {
     if (env.APP_ENV === 'production' && env.PAYMENT_PROVIDER === 'mock') {
       ctx.addIssue({ code: 'custom', path: ['PAYMENT_PROVIDER'], message: 'Mock payments are disabled in production.' });
+    }
+    if (env.PAYMENT_PROVIDER === 'pok') {
+      if (env.POK_ENV !== 'staging' || env.POK_API_BASE_URL !== POK_STAGING_URL) {
+        ctx.addIssue({ code: 'custom', path: ['POK_ENV'], message: `Only POK staging is enabled (POK_ENV=staging, POK_API_BASE_URL=${POK_STAGING_URL}).` });
+      }
+      if (env.APP_ENV === 'production') {
+        ctx.addIssue({ code: 'custom', path: ['APP_ENV'], message: 'POK production payments are not enabled.' });
+      }
+      for (const key of ['POK_MERCHANT_ID', 'POK_KEY_ID', 'POK_KEY_SECRET'] as const) {
+        if (!env[key]) ctx.addIssue({ code: 'custom', path: [key], message: `${key} is required when PAYMENT_PROVIDER=pok.` });
+      }
     }
     if (env.APP_ENV === 'production' && env.EMAIL_TRANSPORT !== 'smtp') {
       ctx.addIssue({ code: 'custom', path: ['EMAIL_TRANSPORT'], message: 'Production must send real email (EMAIL_TRANSPORT=smtp).' });

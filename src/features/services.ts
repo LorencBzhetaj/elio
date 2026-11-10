@@ -9,6 +9,8 @@ import { createLocalStorage, createS3Storage, type PrivateStorage } from './acce
 import { createConsoleTransport, createSmtpTransport, type EmailTransport } from './jobs/email';
 import { createJobHandlers } from './jobs/handlers';
 
+let pokProvider: PaymentProvider | undefined;
+
 /** Runtime composition root for server routes, the worker and scripts. */
 export async function getProvider(db?: Db): Promise<PaymentProvider & Partial<ReturnType<typeof createMockProvider>>> {
   const env = serverEnv();
@@ -19,7 +21,8 @@ export async function getProvider(db?: Db): Promise<PaymentProvider & Partial<Re
     case 'paysera':
       return createPayseraProvider();
     case 'pok':
-      return createPokProvider();
+      // One instance per process so the POK access token is reused until it expires.
+      return (pokProvider ??= createPokProvider({ baseUrl: env.POK_API_BASE_URL, merchantId: env.POK_MERCHANT_ID ?? '', keyId: env.POK_KEY_ID ?? '', keySecret: env.POK_KEY_SECRET ?? '' }));
   }
 }
 

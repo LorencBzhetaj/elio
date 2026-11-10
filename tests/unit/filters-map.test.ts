@@ -56,9 +56,9 @@ describe('filter semantics', () => {
 
   it('guides offer price sorting only when prices are known', () => {
     expect(guideListing(content, null).sorts.map((s) => s.value)).toEqual(['featured']);
-    const prices = new Map([['theth-guide', { amountMinor: 900 }], ['albania-explorer', { amountMinor: 1500 }], ['photo-spots-map', { amountMinor: 500 }]]);
+    const prices = new Map([['theth-guide', { amountMinor: 900 }], ['albania-explorer', { amountMinor: 1500 }], ['photo-spots-map', { amountMinor: 500 }], ['tirana-3-days', { amountMinor: 1000 }]]);
     const g = guideListing(content, prices);
-    expect(applyFilters(g.items, { ...emptyState(), sort: 'price' }).map((i) => i.id)).toEqual(['photo-spots-map', 'theth-guide', 'albania-explorer']);
+    expect(applyFilters(g.items, { ...emptyState(), sort: 'price' }).map((i) => i.id)).toEqual(['photo-spots-map', 'theth-guide', 'tirana-3-days', 'albania-explorer']);
     expect(applyFilters(g.items, { ...emptyState(), sort: 'price:desc' }).map((i) => i.id)[0]).toBe('albania-explorer');
   });
 });

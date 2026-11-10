@@ -120,3 +120,18 @@ but only emulated), a paid tile provider, Lighthouse.
   - logo `alt="Albania Decoded"` links to `/`; stamp images are `alt=""` + `aria-hidden`.
 - Regression: search/filters/map (15 PASS), homepage map card (12 PASS), hero buttons above the fold at 6 phone sizes (OK).
 - Not verified: a real iOS Safari device (WebKit engine only); PDF rendering inside the frame in headless Chromium (no PDF plugin — headers checked instead).
+
+## Update — POK staging payment (11 November 2026)
+
+- `npm test`: **101 / 101 passed** (new `tests/integration/pok.test.ts`, 14 tests, against a fake POK API that
+  follows the documented shapes): staging-only guard, amount units, state mapping, server-side order from the
+  DB price, no access before payment, repeated/lying webhooks → one entitlement + one email, closed-tab
+  recovery via reconciliation, cancel, abandoned → expired, captured-amount/currency/reference mismatch,
+  other merchant, unusable webhook, timeout → needs_review, 4xx → failed, token reuse.
+- **Real POK staging run** (browser): €10 test payment with POK's published test card → order `paid` → email
+  link → My trip → full PDF download (byte-identical). Before sign-in `/api/me/guides` was empty; anonymous
+  download → redirect to `/access`; unsigned/forged file URLs → 403; the email link works once.
+- Leaving the POK page → order pending, nothing unlocked.
+- **Not tested for real:** POK webhook delivery (needs a public https URL), a declined card on staging (no
+  documented declining test card), real email delivery (no SMTP configured; console transport), private
+  storage on Vercel (needs S3-compatible storage — the 100 MB PDF is local only).

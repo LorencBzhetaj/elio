@@ -20,11 +20,26 @@ if (env.APP_ENV === 'production') {
 
 
 // TEST prices only — final prices/currency are an open owner decision.
-const catalogue = [
+// A product with `pdf` uses that real file from PRIVATE storage (never public/); others get a placeholder.
+const catalogue: { slug: string; title: string; priceMinor: number; currency: string; pdf?: string }[] = [
   { slug: 'photo-spots-map', title: 'Photo Spots Map', priceMinor: 500, currency: 'USD' },
   { slug: 'theth-guide', title: 'Theth Guide', priceMinor: 900, currency: 'USD' },
   { slug: 'albania-explorer', title: 'Albania Explorer', priceMinor: 1500, currency: 'USD' },
+  // Test product for the POK staging payment (€10).
+  { slug: 'tirana-3-days', title: '3 Days in Tirana', priceMinor: 1000, currency: 'EUR', pdf: 'guides/tirana-3-days/v1.pdf' },
 ];
+
+function sha256File(file: string): string {
+  const hash = createHash('sha256');
+  const fd = fs.openSync(file, 'r');
+  const chunk = Buffer.alloc(1 << 20);
+  try {
+    for (let n; (n = fs.readSync(fd, chunk, 0, chunk.length, null)) > 0; ) hash.update(chunk.subarray(0, n));
+  } finally {
+    fs.closeSync(fd);
+  }
+  return hash.digest('hex');
+}
 
 const { db, kind, close } = await createDb(env.DATABASE_URL);
 await migrateDb(db, kind);
@@ -32,11 +47,34 @@ await migrateDb(db, kind);
 for (const item of catalogue) {
   let [p] = await db.select().from(products).where(eq(products.slug, item.slug));
   if (!p) {
-    [p] = await db.insert(products).values({ ...item, active: true, isTestProduct: true }).returning();
+    const { pdf: _pdf, ...values } = item;
+    [p] = await db.insert(products).values({ ...values, active: true, isTestProduct: true }).returning();
     console.info(`+ product ${item.slug}`);
   }
-  const key = `guides/${item.slug}/v1-placeholder.pdf`;
   const existing = await db.select().from(productAssets).where(eq(productAssets.productId, p.id));
+  if (existing.length === 0 && item.pdf) {
+    if (env.STORAGE_DRIVER !== 'local') {
+      console.warn(`  upload ${item.pdf} to the private bucket, then re-run the seed (STORAGE_DRIVER=s3)`);
+      continue;
+    }
+    const full = path.resolve(env.PRIVATE_STORAGE_DIR, item.pdf);
+    if (!fs.existsSync(full)) {
+      console.warn(`  missing private file ${full} — product created without a PDF`);
+      continue;
+    }
+    await db.insert(productAssets).values({
+      productId: p.id,
+      version: 1,
+      kind: 'pdf',
+      label: `${item.title} (PDF)`,
+      privateObjectKey: item.pdf,
+      filename: `${item.slug}.pdf`,
+      checksum: sha256File(full),
+    });
+    console.info(`  + private asset ${item.pdf}`);
+    continue;
+  }
+  const key = `guides/${item.slug}/v1-placeholder.pdf`;
   if (existing.length === 0) {
     const pdf = placeholderPdf(item.title);
     if (env.STORAGE_DRIVER === 'local') {

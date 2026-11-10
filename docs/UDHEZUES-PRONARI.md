@@ -51,11 +51,22 @@ Vizitorët publikë shohin vetëm variantin e zgjedhur. Faqet `/preview` janë p
 
 ## Pagesat
 
-Për momentin është aktiv vetëm **mock** (asnjë para reale, asnjë kartë). Paysera dhe POK janë të
-përgatitura si ndërfaqe, por qëllimisht **nuk funksionojnë** derisa:
-1. të zgjidhni ofruesin dhe të keni miratimin e merchant-it,
-2. të merren dokumentet zyrtare aktuale (API, nënshkrimi i callback-ut, njësitë e shumës, monedha),
-3. të plotësohet `docs/payments-integration-note.md` dhe të testohet në sandbox.
+- **POK staging** funksionon (`PAYMENT_PROVIDER=pok` te `.env`). Është testuar me një pagesë reale në staging
+  (kartë testuese, pa para reale). Production **nuk** është aktivizuar: kodi refuzon çdo adresë tjetër përveç
+  `https://api-staging.pokpay.io` dhe refuzon POK kur `APP_ENV=production`.
+- **Mock** mbetet për zhvillim (`PAYMENT_PROVIDER=mock`). Paysera nuk është implementuar.
+- Produkti testues: **3 Days in Tirana**, €10, faqja `/guides/tirana-3-days`. PDF-ja është private te
+  `storage/private/guides/tirana-3-days/v1.pdf` (jashtë `public/` dhe jashtë Git-it).
+
+### Si ta provoni pagesën POK staging nga shfletuesi
+
+1. `npm run db:seed` (vetëm herën e parë), pastaj `npm run dev`.
+2. Hapni `http://localhost:4321/guides/tirana-3-days` → **Get the guide** → shkruani një email → **Continue to payment · €10**.
+3. Në faqen e POK (pay-staging.pokpay.io) përdorni kartën testuese `4242 4242 4242 4242`, çdo datë në të ardhmen, çdo CVV.
+4. Pas pagesës ktheheni te `/order/…`. Faqja e pyet serverin, dhe serveri pyet API-n e POK. Guida hapet vetëm nëse POK konfirmon
+   pagesën e kapur (captured), €10 EUR, merchant-in tonë dhe referencën e porosisë.
+5. Emaili në zhvillim nuk dërgohet realisht: shfaqet në terminal dhe ruhet te `.data/mail/`. Lidhja private
+   e emailit ju hyn në **My trip**, ku PDF-ja hapet dhe shkarkohet.
 
 Suksesi i pagesës vendoset vetëm nga serveri pas verifikimit me ofruesin; kthimi nga faqja e pagesës nuk mjafton.
 
