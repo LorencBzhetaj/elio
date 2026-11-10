@@ -14,7 +14,7 @@ const site = process.env.SITE_URL || (vercelUrl ? `https://${vercelUrl}` : 'http
 
 // Private, transactional and preview routes never go in the sitemap.
 const PRIVATE_PREFIXES = [
-  '/preview', '/checkout', '/order', '/access', '/my-guides', '/admin', '/mock-pay', '/api', '/search', '/my-trip',
+  '/preview', '/checkout', '/order', '/pay/', '/access', '/my-guides', '/admin', '/mock-pay', '/api', '/search', '/my-trip',
 ];
 
 export default defineConfig({

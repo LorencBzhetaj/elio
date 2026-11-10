@@ -1,0 +1,154 @@
+---
+/**
+ * On-site card payment with POK's own JavaScript form (PokPayment.renderForm, documented at
+ * docs.pokpay.io → CDN → Guest checkout). The POK order was already created on the server; the page
+ * only receives its id. Card data goes from POK's form straight to POK — this site never sees it.
+ * The form's success callback is NOT proof of payment: we go to /order/[ref], which verifies the
+ * order through POK's authenticated API before anything is unlocked.
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Icon from '../../components/Icon.astro';
+import { loadOrderForViewer } from '../../lib/order-access';
+import { formatMoney } from '../../features/commerce/money';
+import { serverEnv } from '../../features/services';
+
+export const prerender = false;
+
+const ref = Astro.params.ref ?? '';
+const loaded = await loadOrderForViewer(ref, Astro.cookies);
+const orderUrl = `/order/${encodeURIComponent(ref)}`;
+if (!loaded) return Astro.redirect(orderUrl, 303);
+const env = serverEnv();
+const attempt = loaded.detail.attempts.find((a) => a.provider === 'pok' && a.status === 'pending' && a.providerReference);
+if (loaded.order.status !== 'pending' || !attempt || env.PAYMENT_PROVIDER !== 'pok') return Astro.redirect(orderUrl, 303);
+const title = loaded.detail.items.map((i) => i.titleSnapshot).join(', ');
+---
+<BaseLayout title="Payment" noindex>
+  <div class="container narrow section pay">
+    <p class="eyebrow">Checkout</p>
+    <h1>Pay by card</h1>
+    <dl class="card pay__sum">
+      <div><dt>Item</dt><dd>{title}</dd></div>
+      <div><dt>Total</dt><dd><strong>{formatMoney(loaded.order.totalMinor, loaded.order.currency)}</strong></dd></div>
+      <div><dt>Receipt and access link to</dt><dd>{loaded.order.buyerEmail}</dd></div>
+    </dl>
+    {env.POK_ENV === 'staging' && (
+      <div class="notice notice--warn"><p><strong>Test mode (POK staging).</strong> Use a POK test card, e.g. 4242 4242 4242 4242, any future date and any CVV. No real money moves.</p></div>
+    )}
+
+    <div
+      class="card pay__form"
+      data-pok-pay
+      data-order-id={attempt.providerReference}
+      data-ref={ref}
+      data-env={env.POK_ENV}
+      data-email={loaded.order.buyerEmail}
+    >
+      <div id="pok-checkout"></div>
+      <p class="muted pay__loading" data-loading role="status">Loading the secure card form…</p>
+      <div class="notice co__error" data-error role="alert" tabindex="-1" hidden>
+        <p>The payment didn’t go through. You have not been charged. Please check your card details and try again.</p>
+      </div>
+      <p class="muted pay__checking" data-checking role="status" hidden>Payment sent. Confirming with POK…</p>
+    </div>
+
+    <p class="muted pay__small">
+      <Icon name="lock" size={16} /> Your card details go directly to POK, our payment provider. This site never sees or stores them.
+    </p>
+    <p class="muted pay__small">
+      Problem with the form? <a href={attempt.checkoutUrl ?? orderUrl}>Pay on POK’s secure page instead</a>.
+    </p>
+  </div>
+</BaseLayout>
+
+<!-- POK's official browser library (documented CDN URL); exposes window.PokPayment. -->
+<script is:inline src="https://static.pokpay.io/public/dist/pokpayments/pok-payment.js" defer></script>
+
+<script>
+  type PokPaymentApi = {
+    renderForm: (containerId: string, orderId: string, onSuccess: () => void, onError: (e: unknown) => void, options: Record<string, unknown>) => void;
+  };
+  const box = document.querySelector<HTMLElement>('[data-pok-pay]');
+  if (box) {
+    const { orderId, ref, env, email } = box.dataset;
+    const loading = box.querySelector<HTMLElement>('[data-loading]')!;
+    const errorBox = box.querySelector<HTMLElement>('[data-error]')!;
+    const checking = box.querySelector<HTMLElement>('[data-checking]')!;
+    const orderPage = `/order/${encodeURIComponent(ref!)}`;
+
+    const start = (pok: PokPaymentApi) => {
+      loading.hidden = true;
+      pok.renderForm(
+        'pok-checkout',
+        orderId!,
+        () => {
+          // Not proof of payment: the order page asks our server, which asks POK's API.
+          checking.hidden = false;
+          location.assign(orderPage);
+        },
+        (err) => {
+          // Raw provider messages are not shown to buyers.
+          console.warn('[pok] payment form error', err);
+          errorBox.hidden = false;
+          errorBox.focus();
+        },
+        { env, locale: document.documentElement.lang === 'sq' ? 'al' : 'en', initialState: { email } },
+      );
+    };
+
+    let waited = 0;
+    const wait = () => {
+      const pok = (window as unknown as { PokPayment?: PokPaymentApi }).PokPayment;
+      if (pok) return start(pok);
+      if ((waited += 200) > 15_000) {
+        loading.textContent = 'The card form could not be loaded. Use the link below to pay on POK’s secure page.';
+        return;
+      }
+      setTimeout(wait, 200);
+    };
+    wait();
+  }
+</script>
+
+<style>
+  .pay h1 {
+    font-size: var(--step-3);
+    margin-bottom: 16px;
+  }
+  .pay__sum {
+    display: grid;
+    gap: 6px;
+    padding: 16px 18px;
+    margin: 0 0 16px;
+  }
+  .pay__sum div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .pay__sum dt {
+    color: var(--muted);
+  }
+  .pay__sum dd {
+    margin: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+  .pay__form {
+    padding: clamp(14px, 3vw, 24px);
+    margin-top: 16px;
+    min-height: 220px;
+  }
+  .pay__loading,
+  .pay__checking {
+    margin: 8px 0 0;
+  }
+  .pay__small {
+    font-size: 0.9rem;
+    margin-top: 12px;
+  }
+  .pay__small :global(.icon) {
+    display: inline;
+    vertical-align: -3px;
+  }
+</style>

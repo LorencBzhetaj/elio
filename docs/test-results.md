@@ -135,3 +135,6 @@ but only emulated), a paid tile provider, Lighthouse.
 - **Not tested for real:** POK webhook delivery (needs a public https URL), a declined card on staging (no
   documented declining test card), real email delivery (no SMTP configured; console transport), private
   storage on Vercel (needs S3-compatible storage — the 100 MB PDF is local only).
+- **On-site POK card form** (`/pay/[ref]`, `PokPayment.renderForm`): real staging payment with the test card
+  without leaving the site → `/order/[ref]` verified `paid` through the API → one email. Another browser
+  opening `/pay/[ref]` is redirected (no viewer cookie). Mobile 375 px: no horizontal overflow.

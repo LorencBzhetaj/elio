@@ -14,7 +14,8 @@ Sources: <https://docs.pokpay.io/llms-full.txt> (REST API, PHP SDK) and the auth
 | Sandbox / production base URL | `https://api-staging.pokpay.io` / `https://api.pokpay.io` (production NOT enabled) |
 | Authentication | `POST /auth/sdk/login` `{keyId, keySecret}` → `data.accessToken` (Bearer), `data.expiresAt` (~10 min). Token cached per process, refreshed 60 s early |
 | Create order | `POST /merchants/{merchantId}/sdk-orders` with `amount`, `currencyCode`, `autoCapture: true`, `description`, `merchantCustomReference` (= our attempt id), `redirectUrl`, `failRedirectUrl`, `expiresAfterMinutes: 30`, `webhookUrl` (only when the site is https) |
-| Hosted checkout | `data.sdkOrder._self.confirmUrl` — documented as "Webpage URL to confirm the order" (`https://pay-staging.pokpay.io/sdk-orders/{id}`). We only accept https `*.pokpay.io` hosts |
+| On-site card form (default) | `/pay/[ref]` mounts POK's official form: `<script src="https://static.pokpay.io/public/dist/pokpayments/pok-payment.js">` → `PokPayment.renderForm('pok-checkout', sdkOrderId, onSuccess, onError, { env: 'staging', locale, initialState: { email } })` (docs: CDN → Guest checkout). Order created server-side first; `onSuccess` only navigates to `/order/[ref]`, which verifies via the API. With `autoCapture: true` the order was captured without any extra server call (no `guest-confirm` needed in our test) |
+| Hosted checkout (fallback) | `data.sdkOrder._self.confirmUrl` — documented as "Webpage URL to confirm the order" (`https://pay-staging.pokpay.io/sdk-orders/{id}`). We only accept https `*.pokpay.io` hosts |
 | Return / cancel | `redirectUrl` after confirmation (POK appends `?orderId=…`), `failRedirectUrl` if the payment fails. Both only trigger a server-side status fetch |
 | Webhook | Field `webhookUrl` exists; **payload format and signature are not documented** → treated as a trigger only; the order is re-fetched through the authenticated API |
 | Status retrieval | `GET /merchants/{merchantId}/sdk-orders/{id}` (merchant-scoped; also returns `merchant.id`, which we check) |
@@ -34,7 +35,14 @@ Sources: <https://docs.pokpay.io/llms-full.txt> (REST API, PHP SDK) and the auth
   `status: "paid"`, our merchant id and attempt reference. Unpaid order: `status: "created"`.
 - Leaving the POK page (`?cancelled=1` return): order stays pending, nothing unlocked, "Return to the payment page".
 
+- On-site form (11 November 2026): `/pay/[ref]` → test card → `onSuccess` → `/order/[ref]` verified `paid`
+  via the API, one purchase email; the buyer never left the site. Mobile 375 px: no overflow.
+
 ### Open questions (ask POK support before production)
+
+0. The card fields of `renderForm` are rendered in our page's DOM (not an iframe). Ask POK which PCI DSS
+   self-assessment applies (likely SAQ A-EP instead of SAQ A for the redirect), and whether a pinned,
+   versioned script URL / SRI hash is available for `pok-payment.js`.
 
 1. Webhook payload shape, retry policy and any signature/authentication (we use it only as a trigger; the
    adapter looks for the order id in `sdkOrderId`, `sdkOrder.id`, `data.sdkOrder.id`, `data.id`, `id`).

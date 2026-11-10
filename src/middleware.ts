@@ -2,14 +2,14 @@ import { defineMiddleware } from 'astro:middleware';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { loadDotEnvOnce } from './config/env';
 
-const PRIVATE_PREFIXES = ['/checkout', '/order', '/access', '/my-guides', '/admin', '/mock-pay', '/api', '/preview'];
+const PRIVATE_PREFIXES = ['/checkout', '/order', '/pay', '/access', '/my-guides', '/admin', '/mock-pay', '/api', '/preview'];
 const NOINDEX_PREFIXES = [...PRIVATE_PREFIXES, '/search'];
 /** Public, cacheable API responses built from published content only (they set their own Cache-Control). */
 const PUBLIC_API = ['/api/search', '/api/map/points'];
 const startsWithAny = (path: string, prefixes: string[]) => prefixes.some((p) => path === p || path.startsWith(p + '/'));
 
 /** Routes that need the commerce database. */
-const SHOP_PREFIXES = ['/checkout', '/order', '/access', '/admin', '/mock-pay', '/api/orders', '/api/downloads', '/api/files', '/api/payments', '/api/access', '/api/map/premium', '/api/cron', '/api/me'];
+const SHOP_PREFIXES = ['/checkout', '/order', '/pay', '/access', '/admin', '/mock-pay', '/api/orders', '/api/downloads', '/api/files', '/api/payments', '/api/access', '/api/map/premium', '/api/cron', '/api/me'];
 
 /** A Vercel deployment without DATABASE_URL is a design preview: shop routes show a clear notice. */
 function shopConnected(): boolean {

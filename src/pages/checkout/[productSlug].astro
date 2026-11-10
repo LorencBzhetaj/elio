@@ -60,6 +60,8 @@ if (Astro.request.method === 'POST' && product) {
       });
     }
     const { checkoutUrl } = await startCheckout(db, provider, order.attemptId, { siteUrl: env.SITE_URL });
+    // POK: pay on our own page with POK's card form (the hosted POK page stays as a fallback).
+    if (provider.id === 'pok') return Astro.redirect(`/pay/${order.publicReference}`, 303);
     return Astro.redirect(checkoutUrl, 303);
   } catch (err) {
     if (err instanceof CommerceError) error = messages[err.code] ?? 'Something went wrong. You have not been charged.';
@@ -105,7 +107,7 @@ const idempotencyKey = randomUUID();
               <span>Optional: email me occasional travel tips. (Not required to buy.)</span>
             </label>
             <button class="btn btn--block" type="submit"><Icon name="lock" size={18} /> Continue to payment · {formatMoney(product.priceMinor, product.currency)}</button>
-            <p class="muted co__small">You’ll pay on the payment provider’s secure page. This site never sees or stores your card details.</p>
+            <p class="muted co__small">{env.PAYMENT_PROVIDER === 'pok' ? 'Next you pay by card on this site with POK’s secure form. Card details go directly to POK; this site never sees or stores them.' : 'You’ll pay on the payment provider’s secure page. This site never sees or stores your card details.'}</p>
           </form>
         </div>
         <aside class="card co__summary" aria-labelledby="sum-h">

@@ -62,7 +62,8 @@ Vizitorët publikë shohin vetëm variantin e zgjedhur. Faqet `/preview` janë p
 
 1. `npm run db:seed` (vetëm herën e parë), pastaj `npm run dev`.
 2. Hapni `http://localhost:4321/guides/tirana-3-days` → **Get the guide** → shkruani një email → **Continue to payment · €10**.
-3. Në faqen e POK (pay-staging.pokpay.io) përdorni kartën testuese `4242 4242 4242 4242`, çdo datë në të ardhmen, çdo CVV.
+3. Klienti **nuk largohet nga faqja**: te `/pay/…` hapet formulari zyrtar i kartës i POK brenda faqes sonë.
+   Nëse formulari nuk ngarkohet, ka lidhjen "Pay on POK’s secure page instead". Përdorni kartën testuese `4242 4242 4242 4242`, çdo datë në të ardhmen, çdo CVV.
 4. Pas pagesës ktheheni te `/order/…`. Faqja e pyet serverin, dhe serveri pyet API-n e POK. Guida hapet vetëm nëse POK konfirmon
    pagesën e kapur (captured), €10 EUR, merchant-in tonë dhe referencën e porosisë.
 5. Emaili në zhvillim nuk dërgohet realisht: shfaqet në terminal dhe ruhet te `.data/mail/`. Lidhja private

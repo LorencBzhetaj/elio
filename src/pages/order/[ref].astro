@@ -21,7 +21,8 @@ const cancelledReturn = Astro.url.searchParams.has('cancelled');
 const status = loaded?.order.status;
 const canRetry = loaded && ['failed', 'cancelled', 'expired'].includes(status!) ;
 // After "cancel" on the provider page the provider order stays payable until it expires: offer to go back.
-const resumeUrl = loaded?.detail.attempts.find((a) => a.status === 'pending' && a.checkoutUrl)?.checkoutUrl;
+const resumeAttempt = loaded?.detail.attempts.find((a) => a.status === 'pending' && a.checkoutUrl);
+const resumeUrl = resumeAttempt?.provider === 'pok' ? `/pay/${ref}` : resumeAttempt?.checkoutUrl;
 const inFlight = loaded?.detail.attempts.some((a) => ['created', 'creating', 'pending', 'authorized', 'needs_review'].includes(a.status));
 ---
 <BaseLayout title="Your order" noindex>
